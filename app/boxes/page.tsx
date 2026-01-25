@@ -8,6 +8,7 @@ type BoxRow = {
   code: string;
   name: string | null;
   location: string | null;
+  items?: { quantity: number | null }[]; // for qty sum
 };
 
 export default function BoxesPage() {
@@ -24,9 +25,18 @@ export default function BoxesPage() {
     setLoading(true);
     setError(null);
 
+    // Pull boxes + item quantities so we can sum per box
     const res = await supabase
       .from("boxes")
-      .select("id, code, name, location")
+      .select(
+        `
+        id,
+        code,
+        name,
+        location,
+        items ( quantity )
+      `
+      )
       .order("code", { ascending: true });
 
     if (res.error) {
@@ -88,11 +98,7 @@ export default function BoxesPage() {
     }
 
     // Delete items
-    const delItemsRes = await supabase
-      .from("items")
-      .delete()
-      .eq("box_id", boxToDelete.id);
-
+    const delItemsRes = await supabase.from("items").delete().eq("box_id", boxToDelete.id);
     if (delItemsRes.error) {
       setError(delItemsRes.error.message);
       setBusy(false);
@@ -100,11 +106,7 @@ export default function BoxesPage() {
     }
 
     // Delete box
-    const delBoxRes = await supabase
-      .from("boxes")
-      .delete()
-      .eq("id", boxToDelete.id);
-
+    const delBoxRes = await supabase.from("boxes").delete().eq("id", boxToDelete.id);
     if (delBoxRes.error) {
       setError(delBoxRes.error.message);
       setBusy(false);
@@ -125,60 +127,82 @@ export default function BoxesPage() {
 
       {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
       {loading && <p>Loading boxes…</p>}
-
       {!loading && boxes.length === 0 && <p>No boxes yet.</p>}
 
       <div style={{ display: "grid", gap: 10 }}>
-        {boxes.map((b) => (
-          <div
-            key={b.id}
-            style={{
-              background: "#fff",
-              border: "1px solid #e5e7eb",
-              borderRadius: 18,
-              padding: 14,
-              boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <a
-                href={`/box/${encodeURIComponent(b.code)}`}
-                style={{
-                  textDecoration: "none",
-                  color: "#111",
-                  fontWeight: 900,
-                  fontSize: 16,
-                }}
-              >
-                {b.code}
-              </a>
-              {b.name && <div style={{ marginTop: 4, fontWeight: 700 }}>{b.name}</div>}
-              {b.location && <div style={{ marginTop: 2, opacity: 0.8 }}>{b.location}</div>}
-            </div>
+        {boxes.map((b) => {
+          const totalQty =
+            b.items?.reduce((sum, it) => sum + (it.quantity ?? 0), 0) ?? 0;
 
-            <button
-              type="button"
-              onClick={() => requestDeleteBox(b)}
-              disabled={busy}
+          return (
+            <div
+              key={b.id}
               style={{
-                border: "1px solid #ef4444",
-                color: "#ef4444",
                 background: "#fff",
-                fontWeight: 900,
+                border: "1px solid #e5e7eb",
+                borderRadius: 18,
+                padding: 14,
+                boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
               }}
             >
-              Delete
-            </button>
-          </div>
-        ))}
+              <div>
+                <a
+                  href={`/box/${encodeURIComponent(b.code)}`}
+                  style={{
+                    textDecoration: "none",
+                    color: "#111",
+                    fontWeight: 900,
+                    fontSize: 16,
+                  }}
+                >
+                  {b.code}
+                </a>
+
+                {b.name && <div style={{ marginTop: 4, fontWeight: 700 }}>{b.name}</div>}
+                {b.location && <div style={{ marginTop: 2, opacity: 0.8 }}>{b.location}</div>}
+
+                {/* Item count badge */}
+                <div
+                  style={{
+                    marginTop: 8,
+                    display: "inline-block",
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    fontWeight: 900,
+                    fontSize: 13,
+                    background: "#ecfdf5",
+                    border: "1px solid #bbf7d0",
+                    color: "#166534",
+                  }}
+                >
+                  {totalQty} item{totalQty === 1 ? "" : "s"}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => requestDeleteBox(b)}
+                disabled={busy}
+                style={{
+                  border: "1px solid #ef4444",
+                  color: "#ef4444",
+                  background: "#fff",
+                  fontWeight: 900,
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Floating + bubble (SVG) */}
+      {/* Floating + bubble */}
       <a
         href="/boxes/new"
         aria-label="Create new box"
@@ -257,7 +281,7 @@ export default function BoxesPage() {
   );
 }
 
-/* ===== Modal ===== */
+/* ================= MODAL COMPONENT ================= */
 
 function Modal({
   open,
@@ -301,7 +325,14 @@ function Modal({
           padding: 14,
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 10,
+            alignItems: "center",
+          }}
+        >
           <h3 style={{ margin: 0 }}>{title}</h3>
 
           <button
