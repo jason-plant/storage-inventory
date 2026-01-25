@@ -13,35 +13,81 @@ export const viewport = {
 
 const linkStyle: React.CSSProperties = {
   textDecoration: "none",
-  color: "#000",
-  border: "1px solid #444",
-  padding: "8px 12px",
-  borderRadius: 8,
+  color: "#111",
+  border: "1px solid #ddd",
+  padding: "10px 12px",
+  borderRadius: 14,
   fontSize: 14,
+  fontWeight: 700,
+  background: "#fff",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body
         style={{
           margin: 0,
-          fontFamily: "Arial, sans-serif",
-          background: "#f9f9f9",
+          fontFamily:
+            'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
+          background: "#f6f6f7",
+          color: "#111",
         }}
       >
-        {/* NAVIGATION BAR */}
+        <style>{`
+          :root{
+            --card:#ffffff;
+            --border:#e5e7eb;
+            --shadow: 0 1px 10px rgba(0,0,0,0.06);
+            --radius: 16px;
+          }
+
+          /* Make form controls feel "app-like" */
+          input, select, button, textarea {
+            font-size: 16px; /* prevents iOS zoom on focus */
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            padding: 12px 12px;
+            box-sizing: border-box;
+          }
+
+          button {
+            background: #fff;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+          }
+
+          button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            box-shadow: none;
+          }
+
+          /* Tap targets */
+          a, button, input, select {
+            -webkit-tap-highlight-color: transparent;
+          }
+
+          /* Mobile: make buttons full width where it makes sense */
+          @media (max-width: 600px) {
+            .nav-wrap { flex-direction: column; align-items: flex-start; }
+            .nav-links { width: 100%; }
+            .nav-links a { flex: 1; text-align: center; }
+
+            .full-width-mobile { width: 100% !important; }
+          }
+        `}</style>
+
+        {/* NAV BAR */}
         <nav
           style={{
             position: "sticky",
             top: 0,
             zIndex: 100,
-            background: "#ffffff",
-            borderBottom: "1px solid #ddd",
+            background: "rgba(246,246,247,0.9)",
+            backdropFilter: "blur(10px)",
+            borderBottom: "1px solid #eaeaea",
           }}
         >
           <div
@@ -56,20 +102,18 @@ export default function RootLayout({
               gap: 12,
             }}
           >
-            {/* App title / home link */}
             <a
               href="/boxes"
               style={{
-                fontWeight: 800,
+                fontWeight: 900,
                 textDecoration: "none",
-                color: "#000",
+                color: "#111",
                 fontSize: 18,
               }}
             >
               Storage Inventory
             </a>
 
-            {/* Navigation links */}
             <div
               className="nav-links"
               style={{ display: "flex", gap: 10, flexWrap: "wrap" }}
@@ -83,49 +127,21 @@ export default function RootLayout({
               <a href="/labels" style={linkStyle}>
                 Labels
               </a>
-              
-                {/* Scan QR */}
-                
-                 <a href="/scan" style={linkStyle}>
-  Scan QR
-</a>
-
+              <a href="/scan" style={linkStyle}>
+                Scan QR
+              </a>
             </div>
           </div>
         </nav>
 
-        {/* PAGE CONTENT */}
+        {/* CONTENT */}
         <div
           style={{
             maxWidth: 1100,
             margin: "0 auto",
-            padding: "16px",
+            padding: "14px 14px 28px",
           }}
         >
-          {/* Mobile tweaks */}
-          <style>{`
-            @media (max-width: 600px) {
-              .nav-wrap {
-                flex-direction: column;
-                align-items: flex-start;
-              }
-              .nav-links {
-                width: 100%;
-              }
-              .nav-links a {
-                flex: 1;
-                text-align: center;
-              }
-              button {
-                width: 100%;
-              }
-              input {
-                width: 100%;
-                box-sizing: border-box;
-              }
-            }
-          `}</style>
-
           {children}
         </div>
       </body>

@@ -5,8 +5,6 @@ import { useParams } from "next/navigation";
 import QRCode from "qrcode";
 import { supabase } from "../../../lib/supabaseClient";
 
-/* ================= TYPES ================= */
-
 type BoxRow = {
   id: string;
   code: string;
@@ -27,8 +25,6 @@ type ItemRow = {
   quantity: number | null;
 };
 
-/* ================= PAGE ================= */
-
 export default function BoxPage() {
   const params = useParams<{ code?: string }>();
   const code = params?.code ? decodeURIComponent(String(params.code)) : "";
@@ -39,26 +35,20 @@ export default function BoxPage() {
 
   const [box, setBox] = useState<BoxRow | null>(null);
   const [items, setItems] = useState<ItemRow[]>([]);
-
-  // all boxes list for move dropdowns
   const [allBoxes, setAllBoxes] = useState<BoxMini[]>([]);
 
-  // Bulk move state
+  // Bulk move
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDestBoxId, setBulkDestBoxId] = useState<string>("");
+  const selectedRef = useRef<Set<string>>(new Set());
 
-  // Add item form
+  // Add item
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newQty, setNewQty] = useState(1);
 
-  // Full-screen viewer
+  // Full screen viewer
   const [viewItem, setViewItem] = useState<ItemRow | null>(null);
-
-  // keep a ref so we can safely update Set state
-  const selectedRef = useRef<Set<string>>(new Set());
-
-  /* ================= LOAD ================= */
 
   useEffect(() => {
     if (!code) return;
@@ -88,13 +78,15 @@ export default function BoxPage() {
         .order("name");
 
       setItems(itemsRes.data ?? []);
-      setSelectedIds(new Set());
-      selectedRef.current = new Set();
 
       const boxesRes = await supabase.from("boxes").select("id, code").order("code");
       setAllBoxes((boxesRes.data ?? []) as BoxMini[]);
 
+      const empty = new Set<string>();
+      setSelectedIds(empty);
+      selectedRef.current = empty;
       setBulkDestBoxId("");
+
       setLoading(false);
     }
 
@@ -110,8 +102,6 @@ export default function BoxPage() {
 
     setItems(data ?? []);
   }
-
-  /* ================= ADD ITEM ================= */
 
   async function addItem() {
     if (!box || !newName.trim()) return;
@@ -140,8 +130,6 @@ export default function BoxPage() {
     setBusy(false);
   }
 
-  /* ================= DELETE HELPERS ================= */
-
   function getStoragePathFromPublicUrl(url: string) {
     const marker = "/item-photos/";
     const idx = url.indexOf(marker);
@@ -150,7 +138,6 @@ export default function BoxPage() {
   }
 
   async function deleteItemAndPhoto(item: ItemRow) {
-    // delete photo if exists (best-effort)
     if (item.photo_url) {
       const path = getStoragePathFromPublicUrl(item.photo_url);
       if (path) {
@@ -173,17 +160,13 @@ export default function BoxPage() {
     });
   }
 
-  /* ================= SAVE QUANTITY ================= */
-
   async function saveQuantity(itemId: string, qty: number) {
     const safeQty = Math.max(0, Math.floor(qty));
     const item = items.find((i) => i.id === itemId);
     if (!item) return;
 
     if (safeQty === 0) {
-      const ok = window.confirm(
-        `Quantity is 0.\n\nDelete "${item.name}" from this box?`
-      );
+      const ok = window.confirm(`Quantity is 0.\n\nDelete "${item.name}" from this box?`);
       if (ok) {
         await deleteItemAndPhoto(item);
       } else if (box) {
@@ -198,12 +181,8 @@ export default function BoxPage() {
       return;
     }
 
-    setItems((prev) =>
-      prev.map((i) => (i.id === itemId ? { ...i, quantity: safeQty } : i))
-    );
+    setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, quantity: safeQty } : i)));
   }
-
-  /* ================= BULK MOVE ================= */
 
   function toggleSelected(itemId: string) {
     setSelectedIds((prev) => {
@@ -235,69 +214,49 @@ export default function BoxPage() {
       alert("Tick at least one item first.");
       return;
     }
-
     if (!bulkDestBoxId) {
       alert("Choose a destination box first.");
       return;
     }
 
     const dest = allBoxes.find((b) => b.id === bulkDestBoxId);
-    const ok = window.confirm(
-      `Move ${ids.length} item(s) from ${box.code} to ${dest?.code ?? "the selected box"}?`
-    );
+    const ok = window.confirm(`Move ${ids.length} item(s) from ${box.code} to ${dest?.code ?? "the selected box"}?`);
     if (!ok) return;
 
     setBusy(true);
     setError(null);
 
     const res = await supabase.from("items").update({ box_id: bulkDestBoxId }).in("id", ids);
-
     if (res.error) {
       setError(res.error.message);
       setBusy(false);
       return;
     }
 
-    // Remove moved items from current list
     setItems((prev) => prev.filter((i) => !selectedRef.current.has(i.id)));
-
-    // Clear selection
     clearSelected();
     setBulkDestBoxId("");
     setBusy(false);
   }
 
-  /* ================= PHOTO UPLOAD ================= */
-
   async function uploadPhoto(itemId: string, file: File) {
     const ext = file.name.split(".").pop() || "jpg";
     const fileName = `${itemId}-${Date.now()}.${ext}`;
 
-    const upload = await supabase.storage
-      .from("item-photos")
-      .upload(fileName, file, { upsert: true });
-
+    const upload = await supabase.storage.from("item-photos").upload(fileName, file, { upsert: true });
     if (upload.error) {
       setError(upload.error.message);
       return;
     }
 
-    const publicUrl = supabase.storage
-      .from("item-photos")
-      .getPublicUrl(fileName).data.publicUrl;
+    const publicUrl = supabase.storage.from("item-photos").getPublicUrl(fileName).data.publicUrl;
 
     await supabase.from("items").update({ photo_url: publicUrl }).eq("id", itemId);
 
     if (box) await reloadItems(box.id);
   }
 
-  /* ================= PRINT QR ================= */
-
-  async function printSingleQrLabel(
-    boxCode: string,
-    name?: string | null,
-    location?: string | null
-  ) {
+  async function printSingleQrLabel(boxCode: string, name?: string | null, location?: string | null) {
     const url = `${window.location.origin}/box/${encodeURIComponent(boxCode)}`;
     const qr = await QRCode.toDataURL(url, { width: 420 });
 
@@ -307,7 +266,7 @@ export default function BoxPage() {
     w.document.write(`
       <html>
         <body style="font-family:Arial;padding:20px">
-          <div style="width:320px;border:2px solid #000;padding:14px">
+          <div style="width:320px;border:2px solid #000;padding:14px;border-radius:12px">
             <div style="font-size:22px;font-weight:800">${boxCode}</div>
             ${name ? `<div>${name}</div>` : ""}
             ${location ? `<div>Location: ${location}</div>` : ""}
@@ -320,8 +279,6 @@ export default function BoxPage() {
     `);
   }
 
-  /* ================= RENDER ================= */
-
   if (loading) return <p>Loading…</p>;
   if (!box) return <p>Box not found.</p>;
 
@@ -329,54 +286,70 @@ export default function BoxPage() {
   const selectedCount = selectedIds.size;
 
   return (
-    <main style={{ padding: 20, fontFamily: "Arial, sans-serif" }}>
-      <h1>{box.code}</h1>
-      {box.name && <strong>{box.name}</strong>}
-      {box.location && <div>Location: {box.location}</div>}
-
-      {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
-
-      <button onClick={() => printSingleQrLabel(box.code, box.name, box.location)}>
-        Print QR label
-      </button>
-
-      <hr />
-
-      <h2>Add Item</h2>
-      <input
-        placeholder="Name"
-        value={newName}
-        onChange={(e) => setNewName(e.target.value)}
-      />
-      <input
-        placeholder="Description"
-        value={newDesc}
-        onChange={(e) => setNewDesc(e.target.value)}
-      />
-      <input
-        type="number"
-        min={1}
-        value={newQty}
-        onChange={(e) => setNewQty(Number(e.target.value))}
-      />
-      <button onClick={addItem} disabled={busy}>
-        {busy ? "Working..." : "Add"}
-      </button>
-
-      <hr />
-
-      {/* BULK MOVE BAR */}
+    <main style={{ fontFamily: "inherit" }}>
+      {/* Header card */}
       <div
         style={{
-          border: "1px solid #333",
-          borderRadius: 10,
-          padding: 12,
-          marginBottom: 16,
+          background: "#fff",
+          border: "1px solid #e5e7eb",
+          borderRadius: 18,
+          padding: 14,
+          boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
         }}
       >
-        <h2 style={{ marginTop: 0 }}>Move selected items</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <h1 style={{ margin: "0 0 6px 0" }}>{box.code}</h1>
+            {box.name && <div style={{ fontWeight: 800 }}>{box.name}</div>}
+            {box.location && <div style={{ opacity: 0.8 }}>Location: {box.location}</div>}
+          </div>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+          <button onClick={() => printSingleQrLabel(box.code, box.name, box.location)} className="full-width-mobile">
+            Print QR label
+          </button>
+        </div>
+
+        {error && <p style={{ color: "crimson", marginTop: 10 }}>Error: {error}</p>}
+      </div>
+
+      {/* Add item card */}
+      <div
+        style={{
+          marginTop: 12,
+          background: "#fff",
+          border: "1px solid #e5e7eb",
+          borderRadius: 18,
+          padding: 14,
+          boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
+        }}
+      >
+        <h2 style={{ margin: "0 0 10px 0" }}>Add Item</h2>
+
+        <div style={{ display: "grid", gap: 10 }}>
+          <input placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+          <input placeholder="Description" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} />
+          <input type="number" min={1} value={newQty} onChange={(e) => setNewQty(Number(e.target.value))} />
+
+          <button onClick={addItem} disabled={busy}>
+            {busy ? "Working..." : "Add item"}
+          </button>
+        </div>
+      </div>
+
+      {/* Bulk move card */}
+      <div
+        style={{
+          marginTop: 12,
+          background: "#fff",
+          border: "1px solid #e5e7eb",
+          borderRadius: 18,
+          padding: 14,
+          boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
+        }}
+      >
+        <h2 style={{ margin: "0 0 10px 0" }}>Move selected items</h2>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
           <button type="button" onClick={selectAll} disabled={items.length === 0}>
             Select all
           </button>
@@ -384,22 +357,13 @@ export default function BoxPage() {
             Clear
           </button>
 
-          <div style={{ opacity: 0.85, alignSelf: "center" }}>
+          <div style={{ alignSelf: "center", opacity: 0.85 }}>
             Selected: <strong>{selectedCount}</strong>
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <select
-            value={bulkDestBoxId}
-            onChange={(e) => setBulkDestBoxId(e.target.value)}
-            style={{
-              padding: 10,
-              borderRadius: 8,
-              border: "1px solid #444",
-              minWidth: 180,
-            }}
-          >
+        <div style={{ display: "grid", gap: 10 }}>
+          <select value={bulkDestBoxId} onChange={(e) => setBulkDestBoxId(e.target.value)}>
             <option value="">Select destination box…</option>
             {destinationBoxes.map((b) => (
               <option key={b.id} value={b.id}>
@@ -408,51 +372,73 @@ export default function BoxPage() {
             ))}
           </select>
 
-          <button
-            type="button"
-            onClick={moveSelected}
-            disabled={busy || selectedCount === 0 || !bulkDestBoxId}
-            style={{
-              padding: "10px 12px",
-              borderRadius: 8,
-              border: "1px solid #444",
-              cursor: busy ? "not-allowed" : "pointer",
-              fontWeight: 700,
-            }}
-          >
+          <button onClick={moveSelected} disabled={busy || selectedCount === 0 || !bulkDestBoxId}>
             {busy ? "Moving..." : "Move selected"}
           </button>
         </div>
       </div>
 
-      <h2>Items</h2>
+      {/* Items list */}
+      <h2 style={{ margin: "14px 0 8px" }}>Items</h2>
 
-      <ul style={{ paddingLeft: 18 }}>
+      <div style={{ display: "grid", gap: 10 }}>
         {items.map((i) => {
           const checked = selectedIds.has(i.id);
+          const hasPhoto = Boolean(i.photo_url);
 
           return (
-            <li key={i.id} style={{ marginBottom: 22 }}>
-              {/* Checkbox + name */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div
+              key={i.id}
+              style={{
+                background: "#fff",
+                border: "1px solid #e5e7eb",
+                borderRadius: 18,
+                padding: 14,
+                boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
+              }}
+            >
+              {/* Top line: checkbox + name (tap name to view photo) */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <input
                   type="checkbox"
                   checked={checked}
                   onChange={() => toggleSelected(i.id)}
-                  style={{ transform: "scale(1.2)" }}
+                  style={{ transform: "scale(1.25)" }}
                 />
-                <strong>{i.name}</strong>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (hasPhoto) setViewItem(i);
+                  }}
+                  disabled={!hasPhoto}
+                  style={{
+                    padding: 0,
+                    border: "none",
+                    background: "transparent",
+                    boxShadow: "none",
+                    textAlign: "left",
+                    fontWeight: 900,
+                    cursor: hasPhoto ? "pointer" : "default",
+                    opacity: hasPhoto ? 1 : 0.9,
+                  }}
+                  title={hasPhoto ? "Tap to view photo" : "No photo yet"}
+                >
+                  {i.name}
+                  {hasPhoto ? <span style={{ marginLeft: 8, opacity: 0.6 }}>📷</span> : null}
+                </button>
               </div>
 
+              {i.description && <div style={{ marginTop: 8, opacity: 0.9 }}>{i.description}</div>}
+
               {/* Quantity editor */}
-              <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
                 <button
+                  type="button"
                   onClick={() =>
                     setItems((prev) =>
                       prev.map((it) =>
-                        it.id === i.id
-                          ? { ...it, quantity: Math.max(0, (it.quantity ?? 0) - 1) }
-                          : it
+                        it.id === i.id ? { ...it, quantity: Math.max(0, (it.quantity ?? 0) - 1) } : it
                       )
                     )
                   }
@@ -466,45 +452,31 @@ export default function BoxPage() {
                   value={i.quantity ?? 0}
                   onChange={(e) =>
                     setItems((prev) =>
-                      prev.map((it) =>
-                        it.id === i.id
-                          ? { ...it, quantity: Number(e.target.value) }
-                          : it
-                      )
+                      prev.map((it) => (it.id === i.id ? { ...it, quantity: Number(e.target.value) } : it))
                     )
                   }
-                  style={{ width: 80 }}
+                  style={{ width: 110 }}
                 />
 
                 <button
+                  type="button"
                   onClick={() =>
                     setItems((prev) =>
-                      prev.map((it) =>
-                        it.id === i.id
-                          ? { ...it, quantity: (it.quantity ?? 0) + 1 }
-                          : it
-                      )
+                      prev.map((it) => (it.id === i.id ? { ...it, quantity: (it.quantity ?? 0) + 1 } : it))
                     )
                   }
                 >
                   +
                 </button>
 
-                <button onClick={() => saveQuantity(i.id, i.quantity ?? 0)}>Save</button>
+                <button type="button" onClick={() => saveQuantity(i.id, i.quantity ?? 0)}>
+                  Save
+                </button>
               </div>
 
-              {i.description && <div>{i.description}</div>}
-
-              {/* Show item (full screen) */}
-              {i.photo_url && (
-                <button style={{ marginTop: 8 }} onClick={() => setViewItem(i)}>
-                  Show item
-                </button>
-              )}
-
               {/* Photo upload */}
-              <div style={{ marginTop: 10 }}>
-                <div style={{ marginBottom: 6 }}>Add / change photo:</div>
+              <div style={{ marginTop: 12 }}>
+                <div style={{ marginBottom: 8, opacity: 0.85 }}>Add / change photo:</div>
 
                 <input
                   id={`cam-${i.id}`}
@@ -531,19 +503,19 @@ export default function BoxPage() {
                   }}
                 />
 
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button onClick={() => document.getElementById(`cam-${i.id}`)?.click()}>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button type="button" onClick={() => document.getElementById(`cam-${i.id}`)?.click()}>
                     Take photo
                   </button>
-                  <button onClick={() => document.getElementById(`file-${i.id}`)?.click()}>
+                  <button type="button" onClick={() => document.getElementById(`file-${i.id}`)?.click()}>
                     Choose file
                   </button>
                 </div>
               </div>
-            </li>
+            </div>
           );
         })}
-      </ul>
+      </div>
 
       {/* FULL SCREEN VIEWER */}
       {viewItem && viewItem.photo_url && (
@@ -552,21 +524,18 @@ export default function BoxPage() {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.85)",
+            background: "rgba(0,0,0,0.9)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1000,
+            padding: 12,
           }}
         >
           <img
             src={viewItem.photo_url}
             alt={viewItem.name}
-            style={{
-              maxWidth: "95%",
-              maxHeight: "95%",
-              objectFit: "contain",
-            }}
+            style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 16 }}
           />
         </div>
       )}
