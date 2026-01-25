@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 
 type BoxRow = {
@@ -15,6 +15,10 @@ export default function BoxesPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Modal state
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const boxToDeleteRef = useRef<BoxRow | null>(null);
 
   async function loadBoxes() {
     setLoading(true);
@@ -39,11 +43,21 @@ export default function BoxesPage() {
     loadBoxes();
   }, []);
 
-  async function deleteBox(boxToDelete: BoxRow) {
-    const ok = window.confirm(
-      `Delete box ${boxToDelete.code}?\n\nThis will delete ALL items in this box and remove linked photos.`
-    );
-    if (!ok) return;
+  function requestDeleteBox(b: BoxRow) {
+    boxToDeleteRef.current = b;
+    setConfirmDeleteOpen(true);
+  }
+
+  function getStoragePathFromPublicUrl(url: string) {
+    const marker = "/item-photos/";
+    const idx = url.indexOf(marker);
+    if (idx === -1) return null;
+    return url.substring(idx + marker.length);
+  }
+
+  async function confirmDeleteBox() {
+    const boxToDelete = boxToDeleteRef.current;
+    if (!boxToDelete) return;
 
     setBusy(true);
     setError(null);
@@ -66,9 +80,8 @@ export default function BoxesPage() {
     const paths: string[] = [];
     for (const it of items) {
       if (!it.photo_url) continue;
-      const marker = "/item-photos/";
-      const idx = it.photo_url.indexOf(marker);
-      if (idx !== -1) paths.push(it.photo_url.substring(idx + marker.length));
+      const path = getStoragePathFromPublicUrl(it.photo_url);
+      if (path) paths.push(path);
     }
     if (paths.length) {
       await supabase.storage.from("item-photos").remove(paths);
@@ -98,7 +111,11 @@ export default function BoxesPage() {
       return;
     }
 
-    setBoxes((prev) => prev.filter((b) => b.id !== boxToDelete.id));
+    setBoxes((prev) => prev.filter((x) => x.id !== boxToDelete.id));
+
+    setConfirmDeleteOpen(false);
+    boxToDeleteRef.current = null;
+
     setBusy(false);
   }
 
@@ -146,7 +163,7 @@ export default function BoxesPage() {
 
             <button
               type="button"
-              onClick={() => deleteBox(b)}
+              onClick={() => requestDeleteBox(b)}
               disabled={busy}
               style={{
                 border: "1px solid #ef4444",
@@ -161,41 +178,152 @@ export default function BoxesPage() {
         ))}
       </div>
 
-      {/* Floating + bubble */}
+      {/* Floating + bubble (SVG) */}
       <a
-  href="/boxes/new"
-  aria-label="Create new box"
-  style={{
-    position: "fixed",
-    right: 18,
-    bottom: 18,
-    width: 58,
-    height: 58,
-    borderRadius: 999,
-    background: "#111",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    textDecoration: "none",
-    boxShadow: "0 14px 30px rgba(0,0,0,0.25)",
-    zIndex: 2000,
-  }}
->
-  <svg
-    width="26"
-    height="26"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="white"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="12" y1="5" x2="12" y2="19" />
-    <line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-</a>
+        href="/boxes/new"
+        aria-label="Create new box"
+        style={{
+          position: "fixed",
+          right: 18,
+          bottom: 18,
+          width: 58,
+          height: 58,
+          borderRadius: 999,
+          background: "#111",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textDecoration: "none",
+          boxShadow: "0 14px 30px rgba(0,0,0,0.25)",
+          zIndex: 2000,
+        }}
+      >
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="white"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </a>
 
+      {/* Delete box modal */}
+      <Modal
+        open={confirmDeleteOpen}
+        title="Delete box?"
+        onClose={() => {
+          if (busy) return;
+          setConfirmDeleteOpen(false);
+          boxToDeleteRef.current = null;
+        }}
+      >
+        <p style={{ marginTop: 0 }}>
+          Delete <strong>{boxToDeleteRef.current?.code ?? "this box"}</strong>?
+        </p>
+        <p style={{ marginTop: 0, opacity: 0.85 }}>
+          This will delete all items inside it and remove linked photos.
+        </p>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (busy) return;
+              setConfirmDeleteOpen(false);
+              boxToDeleteRef.current = null;
+            }}
+            disabled={busy}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={confirmDeleteBox}
+            disabled={busy}
+            style={{ background: "#ef4444", color: "#fff" }}
+          >
+            {busy ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </Modal>
     </main>
+  );
+}
+
+/* ===== Modal ===== */
+
+function Modal({
+  open,
+  title,
+  children,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.55)",
+        zIndex: 4000,
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        padding: 12,
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 520,
+          background: "#fff",
+          borderRadius: 18,
+          border: "1px solid #e5e7eb",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+          padding: 14,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+          <h3 style={{ margin: 0 }}>{title}</h3>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              borderRadius: 999,
+              width: 40,
+              height: 40,
+              padding: 0,
+              lineHeight: "40px",
+              textAlign: "center",
+              fontWeight: 900,
+            }}
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div style={{ display: "grid", gap: 10, marginTop: 12 }}>{children}</div>
+      </div>
+    </div>
   );
 }

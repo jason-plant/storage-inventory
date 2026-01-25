@@ -182,7 +182,6 @@ export default function BoxPage() {
     if (!item) return;
 
     if (safeQty === 0) {
-      // open in-app confirm modal
       deleteItemRef.current = item;
       setConfirmDeleteOpen(true);
       return;
@@ -268,7 +267,6 @@ export default function BoxPage() {
       return null;
     }
 
-    // Update boxes list + set destination to the new box
     setAllBoxes((prev) => {
       const next = [...prev, { id: insertRes.data.id, code: insertRes.data.code }];
       next.sort((a, b) => a.code.localeCompare(b.code));
@@ -338,10 +336,8 @@ export default function BoxPage() {
       return;
     }
 
-    // remove moved items from this box list
     setItems((prev) => prev.filter((i) => !selectedRef.current.has(i.id)));
 
-    // exit move mode
     setConfirmMoveOpen(false);
     confirmMoveInfoRef.current = null;
     exitMoveMode();
@@ -419,7 +415,7 @@ export default function BoxPage() {
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
             <div>
               <h2 style={{ margin: 0 }}>Move items</h2>
-              <div style={{ opacity: 0.85 }}>Select items, choose a destination box, then move.</div>
+              <div style={{ opacity: 0.85 }}>Tap items to select them, choose a destination, then move.</div>
             </div>
 
             <button type="button" onClick={exitMoveMode} disabled={busy}>
@@ -468,34 +464,52 @@ export default function BoxPage() {
       <div style={{ display: "grid", gap: 10 }}>
         {items.map((i) => {
           const hasPhoto = Boolean(i.photo_url);
+          const isSelected = selectedIds.has(i.id);
 
           return (
             <div
               key={i.id}
+              onClick={() => {
+                if (moveMode) toggleSelected(i.id);
+              }}
               style={{
                 background: "#fff",
-                border: "1px solid #e5e7eb",
+                border: moveMode
+                  ? isSelected
+                    ? "2px solid #16a34a"
+                    : "2px solid #e5e7eb"
+                  : "1px solid #e5e7eb",
                 borderRadius: 18,
                 padding: 14,
                 boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
+                cursor: moveMode ? "pointer" : "default",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {/* In move mode show a simple indicator */}
                 {moveMode && (
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(i.id)}
-                    onChange={() => toggleSelected(i.id)}
-                    style={{ transform: "scale(1.25)" }}
+                  <div
+                    aria-hidden
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 999,
+                      border: isSelected ? "2px solid #16a34a" : "2px solid #cbd5e1",
+                      background: isSelected ? "#16a34a" : "transparent",
+                      flex: "0 0 auto",
+                    }}
                   />
                 )}
 
+                {/* Name: in normal mode tap opens photo; in move mode it does nothing special (card click selects) */}
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (moveMode) return;
                     if (hasPhoto) setViewItem(i);
                   }}
-                  disabled={!hasPhoto}
+                  disabled={moveMode || !hasPhoto}
                   style={{
                     padding: 0,
                     border: "none",
@@ -503,20 +517,28 @@ export default function BoxPage() {
                     boxShadow: "none",
                     textAlign: "left",
                     fontWeight: 900,
-                    cursor: hasPhoto ? "pointer" : "default",
-                    opacity: hasPhoto ? 1 : 0.9,
+                    cursor: !moveMode && hasPhoto ? "pointer" : "default",
+                    opacity: 1,
                   }}
-                  title={hasPhoto ? "Tap to view photo" : "No photo yet"}
+                  title={!moveMode && hasPhoto ? "Tap to view photo" : undefined}
                 >
                   {i.name}
-                  {hasPhoto ? <span style={{ marginLeft: 8, opacity: 0.6 }}>📷</span> : null}
+                  {!moveMode && hasPhoto ? <span style={{ marginLeft: 8, opacity: 0.6 }}>📷</span> : null}
                 </button>
               </div>
 
               {i.description && <div style={{ marginTop: 8, opacity: 0.9 }}>{i.description}</div>}
 
+              {/* Quantity (disabled in move mode to avoid accidental edits) */}
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
-                <button type="button" onClick={() => saveQuantity(i.id, (i.quantity ?? 0) - 1)} disabled={busy}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    saveQuantity(i.id, (i.quantity ?? 0) - 1);
+                  }}
+                  disabled={busy || moveMode}
+                >
                   −
                 </button>
 
@@ -529,17 +551,38 @@ export default function BoxPage() {
                     setItems((prev) => prev.map((it) => (it.id === i.id ? { ...it, quantity: n } : it)));
                   }}
                   style={{ width: 110 }}
-                  disabled={busy}
+                  disabled={busy || moveMode}
+                  onClick={(e) => e.stopPropagation()}
                 />
 
-                <button type="button" onClick={() => saveQuantity(i.id, (i.quantity ?? 0) + 1)} disabled={busy}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    saveQuantity(i.id, (i.quantity ?? 0) + 1);
+                  }}
+                  disabled={busy || moveMode}
+                >
                   +
                 </button>
 
-                <button type="button" onClick={() => saveQuantity(i.id, i.quantity ?? 0)} disabled={busy}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    saveQuantity(i.id, i.quantity ?? 0);
+                  }}
+                  disabled={busy || moveMode}
+                >
                   Save
                 </button>
               </div>
+
+              {moveMode && (
+                <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>
+                  Tap card to {isSelected ? "unselect" : "select"}.
+                </div>
+              )}
             </div>
           );
         })}
@@ -625,8 +668,8 @@ export default function BoxPage() {
         </svg>
       </button>
 
-      {/* Full screen photo viewer */}
-      {viewItem && viewItem.photo_url && (
+      {/* Full screen photo viewer (disabled in move mode) */}
+      {!moveMode && viewItem && viewItem.photo_url && (
         <div
           onClick={() => setViewItem(null)}
           style={{
@@ -655,7 +698,6 @@ export default function BoxPage() {
 
       {/* ========= MODALS ========= */}
 
-      {/* Create new box modal */}
       <Modal
         open={newBoxOpen}
         title={`Create new box (${nextAutoCode})`}
@@ -706,7 +748,6 @@ export default function BoxPage() {
         </div>
       </Modal>
 
-      {/* Confirm move modal */}
       <Modal
         open={confirmMoveOpen}
         title="Confirm move"
@@ -754,7 +795,6 @@ export default function BoxPage() {
         })()}
       </Modal>
 
-      {/* Confirm delete modal */}
       <Modal
         open={confirmDeleteOpen}
         title="Delete item?"
@@ -776,7 +816,7 @@ export default function BoxPage() {
               if (busy) return;
               setConfirmDeleteOpen(false);
               deleteItemRef.current = null;
-              if (box) reloadItems(box.id); // revert any UI qty changes
+              if (box) reloadItems(box.id);
             }}
             disabled={busy}
           >
@@ -823,7 +863,6 @@ function Modal({
       role="dialog"
       aria-modal="true"
       onMouseDown={(e) => {
-        // click outside closes
         if (e.target === e.currentTarget) onClose();
       }}
       style={{
