@@ -34,15 +34,18 @@ export default function BoxPage() {
   const code = params?.code ? decodeURIComponent(String(params.code)) : "";
 
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [box, setBox] = useState<BoxRow | null>(null);
   const [items, setItems] = useState<ItemRow[]>([]);
 
-  // all boxes list for "move to"
+  // all boxes list for move dropdowns
   const [allBoxes, setAllBoxes] = useState<BoxMini[]>([]);
-  // per-item selected destination box id
-  const [moveTo, setMoveTo] = useState<Record<string, string>>({});
+
+  // Bulk move state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDestBoxId, setBulkDestBoxId] = useState<string>("");
 
   // Add item form
   const [newName, setNewName] = useState("");
@@ -51,6 +54,9 @@ export default function BoxPage() {
 
   // Full-screen viewer
   const [viewItem, setViewItem] = useState<ItemRow | null>(null);
+
+  // keep a ref so we can safely update Set state
+  const selectedRef = useRef<Set<string>>(new Set());
 
   /* ================= LOAD ================= */
 
@@ -75,7 +81,6 @@ export default function BoxPage() {
 
       setBox(boxRes.data);
 
-      // Load items in this box
       const itemsRes = await supabase
         .from("items")
         .select("id, name, description, photo_url, quantity")
@@ -83,15 +88,13 @@ export default function BoxPage() {
         .order("name");
 
       setItems(itemsRes.data ?? []);
+      setSelectedIds(new Set());
+      selectedRef.current = new Set();
 
-      // Load all boxes for move dropdown
-      const boxesRes = await supabase
-        .from("boxes")
-        .select("id, code")
-        .order("code");
-
+      const boxesRes = await supabase.from("boxes").select("id, code").order("code");
       setAllBoxes((boxesRes.data ?? []) as BoxMini[]);
 
+      setBulkDestBoxId("");
       setLoading(false);
     }
 
@@ -113,6 +116,9 @@ export default function BoxPage() {
   async function addItem() {
     if (!box || !newName.trim()) return;
 
+    setBusy(true);
+    setError(null);
+
     const { error } = await supabase.from("items").insert({
       box_id: box.id,
       name: newName.trim(),
@@ -122,6 +128,7 @@ export default function BoxPage() {
 
     if (error) {
       setError(error.message);
+      setBusy(false);
       return;
     }
 
@@ -130,6 +137,7 @@ export default function BoxPage() {
     setNewQty(1);
 
     await reloadItems(box.id);
+    setBusy(false);
   }
 
   /* ================= DELETE HELPERS ================= */
@@ -142,6 +150,7 @@ export default function BoxPage() {
   }
 
   async function deleteItemAndPhoto(item: ItemRow) {
+    // delete photo if exists (best-effort)
     if (item.photo_url) {
       const path = getStoragePathFromPublicUrl(item.photo_url);
       if (path) {
@@ -149,8 +158,19 @@ export default function BoxPage() {
       }
     }
 
-    await supabase.from("items").delete().eq("id", item.id);
+    const delRes = await supabase.from("items").delete().eq("id", item.id);
+    if (delRes.error) {
+      setError(delRes.error.message);
+      return;
+    }
+
     setItems((prev) => prev.filter((i) => i.id !== item.id));
+    setSelectedIds((prev) => {
+      const copy = new Set(prev);
+      copy.delete(item.id);
+      selectedRef.current = copy;
+      return copy;
+    });
   }
 
   /* ================= SAVE QUANTITY ================= */
@@ -172,11 +192,7 @@ export default function BoxPage() {
       return;
     }
 
-    const res = await supabase
-      .from("items")
-      .update({ quantity: safeQty })
-      .eq("id", itemId);
-
+    const res = await supabase.from("items").update({ quantity: safeQty }).eq("id", itemId);
     if (res.error) {
       setError(res.error.message);
       return;
@@ -187,42 +203,68 @@ export default function BoxPage() {
     );
   }
 
-  /* ================= MOVE ITEM ================= */
+  /* ================= BULK MOVE ================= */
 
-  async function moveItem(item: ItemRow) {
+  function toggleSelected(itemId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      selectedRef.current = next;
+      return next;
+    });
+  }
+
+  function selectAll() {
+    const all = new Set(items.map((i) => i.id));
+    setSelectedIds(all);
+    selectedRef.current = all;
+  }
+
+  function clearSelected() {
+    const empty = new Set<string>();
+    setSelectedIds(empty);
+    selectedRef.current = empty;
+  }
+
+  async function moveSelected() {
     if (!box) return;
 
-    const destBoxId = moveTo[item.id];
-    if (!destBoxId) {
+    const ids = Array.from(selectedRef.current);
+    if (ids.length === 0) {
+      alert("Tick at least one item first.");
+      return;
+    }
+
+    if (!bulkDestBoxId) {
       alert("Choose a destination box first.");
       return;
     }
 
-    const dest = allBoxes.find((b) => b.id === destBoxId);
+    const dest = allBoxes.find((b) => b.id === bulkDestBoxId);
     const ok = window.confirm(
-      `Move "${item.name}" from ${box.code} to ${dest?.code ?? "the selected box"}?`
+      `Move ${ids.length} item(s) from ${box.code} to ${dest?.code ?? "the selected box"}?`
     );
     if (!ok) return;
 
-    const res = await supabase
-      .from("items")
-      .update({ box_id: destBoxId })
-      .eq("id", item.id);
+    setBusy(true);
+    setError(null);
+
+    const res = await supabase.from("items").update({ box_id: bulkDestBoxId }).in("id", ids);
 
     if (res.error) {
       setError(res.error.message);
+      setBusy(false);
       return;
     }
 
-    // Remove from current UI list (because it's no longer in this box)
-    setItems((prev) => prev.filter((i) => i.id !== item.id));
+    // Remove moved items from current list
+    setItems((prev) => prev.filter((i) => !selectedRef.current.has(i.id)));
 
-    // Clear dropdown selection for this item
-    setMoveTo((prev) => {
-      const copy = { ...prev };
-      delete copy[item.id];
-      return copy;
-    });
+    // Clear selection
+    clearSelected();
+    setBulkDestBoxId("");
+    setBusy(false);
   }
 
   /* ================= PHOTO UPLOAD ================= */
@@ -283,8 +325,8 @@ export default function BoxPage() {
   if (loading) return <p>Loading…</p>;
   if (!box) return <p>Box not found.</p>;
 
-  // destination options exclude current box
   const destinationBoxes = allBoxes.filter((b) => b.id !== box.id);
+  const selectedCount = selectedIds.size;
 
   return (
     <main style={{ padding: 20, fontFamily: "Arial, sans-serif" }}>
@@ -317,154 +359,190 @@ export default function BoxPage() {
         value={newQty}
         onChange={(e) => setNewQty(Number(e.target.value))}
       />
-      <button onClick={addItem}>Add</button>
+      <button onClick={addItem} disabled={busy}>
+        {busy ? "Working..." : "Add"}
+      </button>
 
       <hr />
+
+      {/* BULK MOVE BAR */}
+      <div
+        style={{
+          border: "1px solid #333",
+          borderRadius: 10,
+          padding: 12,
+          marginBottom: 16,
+        }}
+      >
+        <h2 style={{ marginTop: 0 }}>Move selected items</h2>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+          <button type="button" onClick={selectAll} disabled={items.length === 0}>
+            Select all
+          </button>
+          <button type="button" onClick={clearSelected} disabled={selectedCount === 0}>
+            Clear
+          </button>
+
+          <div style={{ opacity: 0.85, alignSelf: "center" }}>
+            Selected: <strong>{selectedCount}</strong>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <select
+            value={bulkDestBoxId}
+            onChange={(e) => setBulkDestBoxId(e.target.value)}
+            style={{
+              padding: 10,
+              borderRadius: 8,
+              border: "1px solid #444",
+              minWidth: 180,
+            }}
+          >
+            <option value="">Select destination box…</option>
+            {destinationBoxes.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.code}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={moveSelected}
+            disabled={busy || selectedCount === 0 || !bulkDestBoxId}
+            style={{
+              padding: "10px 12px",
+              borderRadius: 8,
+              border: "1px solid #444",
+              cursor: busy ? "not-allowed" : "pointer",
+              fontWeight: 700,
+            }}
+          >
+            {busy ? "Moving..." : "Move selected"}
+          </button>
+        </div>
+      </div>
 
       <h2>Items</h2>
 
       <ul style={{ paddingLeft: 18 }}>
-        {items.map((i) => (
-          <li key={i.id} style={{ marginBottom: 22 }}>
-            <strong>{i.name}</strong>
+        {items.map((i) => {
+          const checked = selectedIds.has(i.id);
 
-            {/* Quantity editor */}
-            <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-              <button
-                onClick={() =>
-                  setItems((prev) =>
-                    prev.map((it) =>
-                      it.id === i.id
-                        ? { ...it, quantity: Math.max(0, (it.quantity ?? 0) - 1) }
-                        : it
+          return (
+            <li key={i.id} style={{ marginBottom: 22 }}>
+              {/* Checkbox + name */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleSelected(i.id)}
+                  style={{ transform: "scale(1.2)" }}
+                />
+                <strong>{i.name}</strong>
+              </div>
+
+              {/* Quantity editor */}
+              <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                <button
+                  onClick={() =>
+                    setItems((prev) =>
+                      prev.map((it) =>
+                        it.id === i.id
+                          ? { ...it, quantity: Math.max(0, (it.quantity ?? 0) - 1) }
+                          : it
+                      )
                     )
-                  )
-                }
-              >
-                −
-              </button>
-
-              <input
-                type="number"
-                min={0}
-                value={i.quantity ?? 0}
-                onChange={(e) =>
-                  setItems((prev) =>
-                    prev.map((it) =>
-                      it.id === i.id
-                        ? { ...it, quantity: Number(e.target.value) }
-                        : it
-                    )
-                  )
-                }
-                style={{ width: 80 }}
-              />
-
-              <button
-                onClick={() =>
-                  setItems((prev) =>
-                    prev.map((it) =>
-                      it.id === i.id ? { ...it, quantity: (it.quantity ?? 0) + 1 } : it
-                    )
-                  )
-                }
-              >
-                +
-              </button>
-
-              <button onClick={() => saveQuantity(i.id, i.quantity ?? 0)}>Save</button>
-            </div>
-
-            {i.description && <div>{i.description}</div>}
-
-            {/* Show item (full screen) */}
-            {i.photo_url && (
-              <button style={{ marginTop: 8 }} onClick={() => setViewItem(i)}>
-                Show item
-              </button>
-            )}
-
-            {/* Move item controls */}
-            <div style={{ marginTop: 10 }}>
-              <div style={{ marginBottom: 6 }}>Move to another box:</div>
-
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <select
-                  value={moveTo[i.id] ?? ""}
-                  onChange={(e) =>
-                    setMoveTo((prev) => ({ ...prev, [i.id]: e.target.value }))
                   }
-                  style={{
-                    padding: 10,
-                    borderRadius: 8,
-                    border: "1px solid #444",
-                    minWidth: 160,
-                  }}
                 >
-                  <option value="">Select box…</option>
-                  {destinationBoxes.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.code}
-                    </option>
-                  ))}
-                </select>
+                  −
+                </button>
+
+                <input
+                  type="number"
+                  min={0}
+                  value={i.quantity ?? 0}
+                  onChange={(e) =>
+                    setItems((prev) =>
+                      prev.map((it) =>
+                        it.id === i.id
+                          ? { ...it, quantity: Number(e.target.value) }
+                          : it
+                      )
+                    )
+                  }
+                  style={{ width: 80 }}
+                />
 
                 <button
-                  type="button"
-                  onClick={() => moveItem(i)}
-                  style={{
-                    padding: "10px 12px",
-                    borderRadius: 8,
-                    border: "1px solid #444",
-                    cursor: "pointer",
-                    fontWeight: 700,
-                  }}
+                  onClick={() =>
+                    setItems((prev) =>
+                      prev.map((it) =>
+                        it.id === i.id
+                          ? { ...it, quantity: (it.quantity ?? 0) + 1 }
+                          : it
+                      )
+                    )
+                  }
                 >
-                  Move
+                  +
                 </button>
+
+                <button onClick={() => saveQuantity(i.id, i.quantity ?? 0)}>Save</button>
               </div>
-            </div>
 
-            {/* Photo upload */}
-            <div style={{ marginTop: 10 }}>
-              <div style={{ marginBottom: 6 }}>Add / change photo:</div>
+              {i.description && <div>{i.description}</div>}
 
-              <input
-                id={`cam-${i.id}`}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) uploadPhoto(i.id, file);
-                  e.currentTarget.value = "";
-                }}
-              />
-
-              <input
-                id={`file-${i.id}`}
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) uploadPhoto(i.id, file);
-                  e.currentTarget.value = "";
-                }}
-              />
-
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button onClick={() => document.getElementById(`cam-${i.id}`)?.click()}>
-                  Take photo
+              {/* Show item (full screen) */}
+              {i.photo_url && (
+                <button style={{ marginTop: 8 }} onClick={() => setViewItem(i)}>
+                  Show item
                 </button>
-                <button onClick={() => document.getElementById(`file-${i.id}`)?.click()}>
-                  Choose file
-                </button>
+              )}
+
+              {/* Photo upload */}
+              <div style={{ marginTop: 10 }}>
+                <div style={{ marginBottom: 6 }}>Add / change photo:</div>
+
+                <input
+                  id={`cam-${i.id}`}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadPhoto(i.id, file);
+                    e.currentTarget.value = "";
+                  }}
+                />
+
+                <input
+                  id={`file-${i.id}`}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadPhoto(i.id, file);
+                    e.currentTarget.value = "";
+                  }}
+                />
+
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button onClick={() => document.getElementById(`cam-${i.id}`)?.click()}>
+                    Take photo
+                  </button>
+                  <button onClick={() => document.getElementById(`file-${i.id}`)?.click()}>
+                    Choose file
+                  </button>
+                </div>
               </div>
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
       {/* FULL SCREEN VIEWER */}
