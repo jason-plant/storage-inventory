@@ -332,41 +332,76 @@ export default function BoxPage() {
                     </div>
                   ) : null}
 
-                  {/* ✅ Choose photo button */}
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ marginBottom: 6 }}>Add / change photo:</div>
+                 {/* Add / change photo */}
+<div style={{ marginTop: 10 }}>
+  <div style={{ marginBottom: 6 }}>Add / change photo:</div>
 
-                    <input
-                      id={`file-${i.id}`}
-                      type="file"
-                      accept="image/*"
-                       capture="environment"
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) uploadPhoto(i.id, file);
-                        e.currentTarget.value = "";
-                      }}
-                    />
+  {/* Camera input */}
+  <input
+    id={`camera-${i.id}`}
+    type="file"
+    accept="image/*"
+    capture="environment"
+    style={{ display: "none" }}
+    onChange={(e) => {
+      const file = e.target.files?.[0];
+      if (file) uploadPhoto(i.id, file);
+      e.currentTarget.value = "";
+    }}
+  />
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const el = document.getElementById(
-                          `file-${i.id}`
-                        ) as HTMLInputElement | null;
-                        el?.click();
-                      }}
-                      style={{
-                        padding: "10px 12px",
-                        borderRadius: 8,
-                        border: "1px solid #444",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Choose photo
-                    </button>
-                  </div>
+  {/* File picker input */}
+  <input
+    id={`file-${i.id}`}
+    type="file"
+    accept="image/*"
+    style={{ display: "none" }}
+    onChange={(e) => {
+      const file = e.target.files?.[0];
+      if (file) uploadPhoto(i.id, file);
+      e.currentTarget.value = "";
+    }}
+  />
+
+  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+    <button
+      type="button"
+      onClick={() => {
+        const el = document.getElementById(
+          `camera-${i.id}`
+        ) as HTMLInputElement | null;
+        el?.click();
+      }}
+      style={{
+        padding: "10px 12px",
+        borderRadius: 8,
+        border: "1px solid #444",
+        cursor: "pointer",
+      }}
+    >
+      Take photo
+    </button>
+
+    <button
+      type="button"
+      onClick={() => {
+        const el = document.getElementById(
+          `file-${i.id}`
+        ) as HTMLInputElement | null;
+        el?.click();
+      }}
+      style={{
+        padding: "10px 12px",
+        borderRadius: 8,
+        border: "1px solid #444",
+        cursor: "pointer",
+      }}
+    >
+      Choose file
+    </button>
+  </div>
+</div>
+
                 </li>
               ))}
             </ul>
