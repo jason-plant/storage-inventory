@@ -42,11 +42,6 @@ export default function BoxPage() {
   const [bulkDestBoxId, setBulkDestBoxId] = useState<string>("");
   const selectedRef = useRef<Set<string>>(new Set());
 
-  // Add item
-  const [newName, setNewName] = useState("");
-  const [newDesc, setNewDesc] = useState("");
-  const [newQty, setNewQty] = useState(1);
-
   // Full screen viewer
   const [viewItem, setViewItem] = useState<ItemRow | null>(null);
 
@@ -101,33 +96,6 @@ export default function BoxPage() {
       .order("name");
 
     setItems(data ?? []);
-  }
-
-  async function addItem() {
-    if (!box || !newName.trim()) return;
-
-    setBusy(true);
-    setError(null);
-
-    const { error } = await supabase.from("items").insert({
-      box_id: box.id,
-      name: newName.trim(),
-      description: newDesc.trim() || null,
-      quantity: newQty,
-    });
-
-    if (error) {
-      setError(error.message);
-      setBusy(false);
-      return;
-    }
-
-    setNewName("");
-    setNewDesc("");
-    setNewQty(1);
-
-    await reloadItems(box.id);
-    setBusy(false);
   }
 
   function getStoragePathFromPublicUrl(url: string) {
@@ -220,7 +188,9 @@ export default function BoxPage() {
     }
 
     const dest = allBoxes.find((b) => b.id === bulkDestBoxId);
-    const ok = window.confirm(`Move ${ids.length} item(s) from ${box.code} to ${dest?.code ?? "the selected box"}?`);
+    const ok = window.confirm(
+      `Move ${ids.length} item(s) from ${box.code} to ${dest?.code ?? "the selected box"}?`
+    );
     if (!ok) return;
 
     setBusy(true);
@@ -286,7 +256,7 @@ export default function BoxPage() {
   const selectedCount = selectedIds.size;
 
   return (
-    <main style={{ fontFamily: "inherit" }}>
+    <main style={{ paddingBottom: 90 }}>
       {/* Header card */}
       <div
         style={{
@@ -310,30 +280,6 @@ export default function BoxPage() {
         </div>
 
         {error && <p style={{ color: "crimson", marginTop: 10 }}>Error: {error}</p>}
-      </div>
-
-      {/* Add item card */}
-      <div
-        style={{
-          marginTop: 12,
-          background: "#fff",
-          border: "1px solid #e5e7eb",
-          borderRadius: 18,
-          padding: 14,
-          boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
-        }}
-      >
-        <h2 style={{ margin: "0 0 10px 0" }}>Add Item</h2>
-
-        <div style={{ display: "grid", gap: 10 }}>
-          <input placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} />
-          <input placeholder="Description" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} />
-          <input type="number" min={1} value={newQty} onChange={(e) => setNewQty(Number(e.target.value))} />
-
-          <button onClick={addItem} disabled={busy}>
-            {busy ? "Working..." : "Add item"}
-          </button>
-        </div>
       </div>
 
       {/* Bulk move card */}
@@ -378,7 +324,7 @@ export default function BoxPage() {
         </div>
       </div>
 
-      {/* Items list */}
+      {/* Items */}
       <h2 style={{ margin: "14px 0 8px" }}>Items</h2>
 
       <div style={{ display: "grid", gap: 10 }}>
@@ -397,7 +343,6 @@ export default function BoxPage() {
                 boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
               }}
             >
-              {/* Top line: checkbox + name (tap name to view photo) */}
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <input
                   type="checkbox"
@@ -517,7 +462,42 @@ export default function BoxPage() {
         })}
       </div>
 
-      {/* FULL SCREEN VIEWER */}
+      {/* Floating Add Item SVG button */}
+      <a
+        href={`/box/${encodeURIComponent(box.code)}/new-item`}
+        aria-label="Add item"
+        style={{
+          position: "fixed",
+          right: 18,
+          bottom: 18,
+          width: 58,
+          height: 58,
+          borderRadius: 999,
+          background: "#111",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textDecoration: "none",
+          boxShadow: "0 14px 30px rgba(0,0,0,0.25)",
+          zIndex: 2000,
+        }}
+      >
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="white"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </a>
+
+      {/* Full screen photo viewer */}
       {viewItem && viewItem.photo_url && (
         <div
           onClick={() => setViewItem(null)}
@@ -528,14 +508,19 @@ export default function BoxPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 1000,
+            zIndex: 3000,
             padding: 12,
           }}
         >
           <img
             src={viewItem.photo_url}
             alt={viewItem.name}
-            style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 16 }}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
+              borderRadius: 16,
+            }}
           />
         </div>
       )}
