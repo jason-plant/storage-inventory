@@ -85,14 +85,11 @@ export default function RootLayout({
               </a>
               
                 {/* Scan QR */}
-                <a
-                  href="https://www.google.com/search?q=scan+qr+code"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={linkStyle}
-                >
-                  Scan QR
-                </a>
+                
+                 <a href="/scan" style={linkStyle}>
+  Scan QR
+</a>
+
             </div>
           </div>
         </nav>
