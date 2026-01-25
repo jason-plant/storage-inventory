@@ -34,6 +34,12 @@ function parseBoxNumber(code: string): number | null {
   const num = Number(m[1]);
   return Number.isFinite(num) ? num : null;
 }
+function getStoragePathFromPublicUrl(url: string) {
+  const marker = "/item-photos/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  return url.substring(idx + marker.length);
+}
 
 export default function BoxPage() {
   const params = useParams<{ code?: string }>();
@@ -56,13 +62,10 @@ export default function BoxPage() {
   const selectedRef = useRef<Set<string>>(new Set());
   const [bulkDestBoxId, setBulkDestBoxId] = useState("");
 
-  /* ========= MODALS STATE ========= */
-
-  // Create new destination box modal
+  // Modals
   const [newBoxOpen, setNewBoxOpen] = useState(false);
   const [newBoxName, setNewBoxName] = useState("");
 
-  // Confirm move modal
   const [confirmMoveOpen, setConfirmMoveOpen] = useState(false);
   const confirmMoveInfoRef = useRef<{
     count: number;
@@ -72,7 +75,6 @@ export default function BoxPage() {
     itemIds: string[];
   } | null>(null);
 
-  // Confirm delete item modal (qty = 0)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const deleteItemRef = useRef<ItemRow | null>(null);
 
@@ -108,7 +110,7 @@ export default function BoxPage() {
       const boxesRes = await supabase.from("boxes").select("id, code").order("code");
       setAllBoxes((boxesRes.data ?? []) as BoxMini[]);
 
-      // reset move mode state
+      // reset move state
       setMoveMode(false);
       const empty = new Set<string>();
       setSelectedIds(empty);
@@ -139,12 +141,7 @@ export default function BoxPage() {
     setItems(data ?? []);
   }
 
-  function getStoragePathFromPublicUrl(url: string) {
-    const marker = "/item-photos/";
-    const idx = url.indexOf(marker);
-    if (idx === -1) return null;
-    return url.substring(idx + marker.length);
-  }
+  /* ============= Quantity & Delete ============= */
 
   async function deleteItemAndPhoto(item: ItemRow) {
     setBusy(true);
@@ -166,6 +163,7 @@ export default function BoxPage() {
 
     setItems((prev) => prev.filter((i) => i.id !== item.id));
 
+    // also remove from selection if selected
     setSelectedIds((prev) => {
       const copy = new Set(prev);
       copy.delete(item.id);
@@ -187,14 +185,16 @@ export default function BoxPage() {
       return;
     }
 
-    await supabase.from("items").update({ quantity: safeQty }).eq("id", itemId);
+    const res = await supabase.from("items").update({ quantity: safeQty }).eq("id", itemId);
+    if (res.error) {
+      setError(res.error.message);
+      return;
+    }
 
-    setItems((prev) =>
-      prev.map((i) => (i.id === itemId ? { ...i, quantity: safeQty } : i))
-    );
+    setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, quantity: safeQty } : i)));
   }
 
-  /* ========= MOVE MODE HELPERS ========= */
+  /* ============= Move Mode ============= */
 
   const nextAutoCode = useMemo(() => {
     let max = 0;
@@ -325,10 +325,7 @@ export default function BoxPage() {
     setBusy(true);
     setError(null);
 
-    const res = await supabase
-      .from("items")
-      .update({ box_id: info.toId })
-      .in("id", info.itemIds);
+    const res = await supabase.from("items").update({ box_id: info.toId }).in("id", info.itemIds);
 
     if (res.error) {
       setError(res.error.message);
@@ -345,9 +342,11 @@ export default function BoxPage() {
     setBusy(false);
   }
 
+  /* ============= QR ============= */
+
   async function printSingleQrLabel(boxCode: string, name?: string | null, location?: string | null) {
     const url = `${window.location.origin}/box/${encodeURIComponent(boxCode)}`;
-    const qr = await QRCode.toDataURL(url, { width: 420 });
+    const qr = await QRCode.toDataURL(url, { width: 420, margin: 1 });
 
     const w = window.open("", "_blank");
     if (!w) return;
@@ -357,16 +356,18 @@ export default function BoxPage() {
         <body style="font-family:Arial;padding:20px">
           <div style="width:320px;border:2px solid #000;padding:14px;border-radius:12px">
             <div style="font-size:22px;font-weight:800">${boxCode}</div>
-            ${name ? `<div>${name}</div>` : ""}
-            ${location ? `<div>Location: ${location}</div>` : ""}
-            <img src="${qr}" style="width:100%" />
-            <div style="font-size:10px">${url}</div>
+            ${name ? `<div style="margin-top:6px">${name}</div>` : ""}
+            ${location ? `<div style="margin-top:6px">Location: ${location}</div>` : ""}
+            <img src="${qr}" style="width:100%;margin-top:10px" />
+            <div style="font-size:10px;margin-top:10px;word-break:break-all">${url}</div>
           </div>
           <script>window.onload=()=>window.print()</script>
         </body>
       </html>
     `);
   }
+
+  /* ============= Render ============= */
 
   if (loading) return <p>Loading…</p>;
   if (!box) return <p>Box not found.</p>;
@@ -392,15 +393,13 @@ export default function BoxPage() {
             {box.location && <div style={{ opacity: 0.8 }}>Location: {box.location}</div>}
           </div>
 
-          <button onClick={() => printSingleQrLabel(box.code, box.name, box.location)}>
-            Print QR
-          </button>
+          <button onClick={() => printSingleQrLabel(box.code, box.name, box.location)}>Print QR</button>
         </div>
 
         {error && <p style={{ color: "crimson", marginTop: 10 }}>Error: {error}</p>}
       </div>
 
-      {/* Move Mode Panel */}
+      {/* Move Mode panel (kept because it’s handy for Select all / Clear) */}
       {moveMode && (
         <div
           style={{
@@ -415,7 +414,7 @@ export default function BoxPage() {
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
             <div>
               <h2 style={{ margin: 0 }}>Move items</h2>
-              <div style={{ opacity: 0.85 }}>Tap items to select them, choose a destination, then move.</div>
+              <div style={{ opacity: 0.85 }}>Tap item cards to select. Use the sticky bar to move.</div>
             </div>
 
             <button type="button" onClick={exitMoveMode} disabled={busy}>
@@ -433,27 +432,6 @@ export default function BoxPage() {
             <div style={{ alignSelf: "center", opacity: 0.85 }}>
               Selected: <strong>{selectedIds.size}</strong>
             </div>
-          </div>
-
-          <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
-            <select value={bulkDestBoxId} onChange={(e) => onDestinationChange(e.target.value)} disabled={busy}>
-              <option value="">Select destination box…</option>
-              <option value="__new__">{`➕ Create new box (${nextAutoCode})…`}</option>
-              {destinationBoxes.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.code}
-                </option>
-              ))}
-            </select>
-
-            <button
-              type="button"
-              onClick={requestMoveSelected}
-              disabled={busy || selectedIds.size === 0 || !bulkDestBoxId}
-              style={{ background: "#111", color: "#fff" }}
-            >
-              {busy ? "Working..." : "Move selected"}
-            </button>
           </div>
         </div>
       )}
@@ -486,7 +464,6 @@ export default function BoxPage() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                {/* In move mode show a simple indicator */}
                 {moveMode && (
                   <div
                     aria-hidden
@@ -501,7 +478,7 @@ export default function BoxPage() {
                   />
                 )}
 
-                {/* Name: in normal mode tap opens photo; in move mode it does nothing special (card click selects) */}
+                {/* Item name + photo indicator */}
                 <button
                   type="button"
                   onClick={(e) => {
@@ -519,17 +496,20 @@ export default function BoxPage() {
                     fontWeight: 900,
                     cursor: !moveMode && hasPhoto ? "pointer" : "default",
                     opacity: 1,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
                   }}
                   title={!moveMode && hasPhoto ? "Tap to view photo" : undefined}
                 >
                   {i.name}
-                  {!moveMode && hasPhoto ? <span style={{ marginLeft: 8, opacity: 0.6 }}>📷</span> : null}
+                  {hasPhoto ? <span style={{ opacity: 0.6 }}>📷</span> : null}
                 </button>
               </div>
 
               {i.description && <div style={{ marginTop: 8, opacity: 0.9 }}>{i.description}</div>}
 
-              {/* Quantity (disabled in move mode to avoid accidental edits) */}
+              {/* Quantity controls - NO Save button */}
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
                 <button
                   type="button"
@@ -550,6 +530,12 @@ export default function BoxPage() {
                     const n = Number(e.target.value);
                     setItems((prev) => prev.map((it) => (it.id === i.id ? { ...it, quantity: n } : it)));
                   }}
+                  onBlur={(e) => {
+                    // Optional: if they manually type a number, we save it when they tap away
+                    if (moveMode) return;
+                    const n = Number(e.target.value);
+                    if (Number.isFinite(n)) saveQuantity(i.id, n);
+                  }}
                   style={{ width: 110 }}
                   disabled={busy || moveMode}
                   onClick={(e) => e.stopPropagation()}
@@ -564,17 +550,6 @@ export default function BoxPage() {
                   disabled={busy || moveMode}
                 >
                   +
-                </button>
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    saveQuantity(i.id, i.quantity ?? 0);
-                  }}
-                  disabled={busy || moveMode}
-                >
-                  Save
                 </button>
               </div>
 
@@ -668,7 +643,63 @@ export default function BoxPage() {
         </svg>
       </button>
 
-      {/* Full screen photo viewer (disabled in move mode) */}
+      {/* Sticky Move Action Bar */}
+      {moveMode && (
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            padding: "12px 14px calc(env(safe-area-inset-bottom) + 12px)",
+            background: "#ffffff",
+            borderTop: "1px solid #e5e7eb",
+            boxShadow: "0 -10px 30px rgba(0,0,0,0.15)",
+            zIndex: 3500,
+            display: "flex",
+            gap: 10,
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ fontWeight: 900 }}>Selected: {selectedIds.size}</div>
+
+          <div style={{ flex: 1, minWidth: 160 }}>
+            <select
+              value={bulkDestBoxId}
+              onChange={(e) => onDestinationChange(e.target.value)}
+              disabled={busy}
+              style={{ width: "100%" }}
+            >
+              <option value="">Destination…</option>
+              <option value="__new__">{`➕ Create new box (${nextAutoCode})…`}</option>
+              {destinationBoxes.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.code}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={requestMoveSelected}
+            disabled={busy || selectedIds.size === 0 || !bulkDestBoxId}
+            style={{
+              background: "#111",
+              color: "#fff",
+              fontWeight: 900,
+              padding: "10px 16px",
+              borderRadius: 14,
+            }}
+          >
+            {busy ? "Moving…" : "Move"}
+          </button>
+        </div>
+      )}
+
+      {/* Full screen photo viewer */}
       {!moveMode && viewItem && viewItem.photo_url && (
         <div
           onClick={() => setViewItem(null)}
@@ -686,18 +717,12 @@ export default function BoxPage() {
           <img
             src={viewItem.photo_url}
             alt={viewItem.name}
-            style={{
-              maxWidth: "100%",
-              maxHeight: "100%",
-              objectFit: "contain",
-              borderRadius: 16,
-            }}
+            style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 16 }}
           />
         </div>
       )}
 
-      {/* ========= MODALS ========= */}
-
+      {/* Create new box modal */}
       <Modal
         open={newBoxOpen}
         title={`Create new box (${nextAutoCode})`}
@@ -707,9 +732,7 @@ export default function BoxPage() {
           setNewBoxName("");
         }}
       >
-        <p style={{ marginTop: 0, opacity: 0.85 }}>
-          Enter a name for the new box. The code is auto-assigned.
-        </p>
+        <p style={{ marginTop: 0, opacity: 0.85 }}>Enter a name. Code is auto-assigned.</p>
 
         <input
           placeholder="Box name"
@@ -748,6 +771,7 @@ export default function BoxPage() {
         </div>
       </Modal>
 
+      {/* Confirm move modal */}
       <Modal
         open={confirmMoveOpen}
         title="Confirm move"
@@ -764,8 +788,8 @@ export default function BoxPage() {
           return (
             <>
               <p style={{ marginTop: 0 }}>
-                Move <strong>{info.count}</strong> item(s) from{" "}
-                <strong>{info.fromCode}</strong> to <strong>{info.toCode}</strong>?
+                Move <strong>{info.count}</strong> item(s) from <strong>{info.fromCode}</strong> to{" "}
+                <strong>{info.toCode}</strong>?
               </p>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -795,6 +819,7 @@ export default function BoxPage() {
         })()}
       </Modal>
 
+      {/* Confirm delete modal */}
       <Modal
         open={confirmDeleteOpen}
         title="Delete item?"
@@ -805,8 +830,7 @@ export default function BoxPage() {
         }}
       >
         <p style={{ marginTop: 0 }}>
-          Quantity is 0. Delete{" "}
-          <strong>{deleteItemRef.current?.name ?? "this item"}</strong> from this box (and remove the photo)?
+          Quantity is 0. Delete <strong>{deleteItemRef.current?.name ?? "this item"}</strong> (and remove photo)?
         </p>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -839,64 +863,6 @@ export default function BoxPage() {
           </button>
         </div>
       </Modal>
-      {/* Sticky Move Action Bar */}
-{moveMode && (
-  <div
-    style={{
-      position: "fixed",
-      left: 0,
-      right: 0,
-      bottom: 0,
-      padding: "12px 14px calc(env(safe-area-inset-bottom) + 12px)",
-      background: "#ffffff",
-      borderTop: "1px solid #e5e7eb",
-      boxShadow: "0 -10px 30px rgba(0,0,0,0.15)",
-      zIndex: 3500,
-      display: "flex",
-      gap: 10,
-      alignItems: "center",
-      justifyContent: "space-between",
-      flexWrap: "wrap",
-    }}
-  >
-    <div style={{ fontWeight: 900 }}>
-      Selected: {selectedIds.size}
-    </div>
-
-    <div style={{ flex: 1, minWidth: 160 }}>
-      <select
-        value={bulkDestBoxId}
-        onChange={(e) => onDestinationChange(e.target.value)}
-        disabled={busy}
-        style={{ width: "100%" }}
-      >
-        <option value="">Destination…</option>
-        <option value="__new__">{`➕ Create new box (${nextAutoCode})…`}</option>
-        {destinationBoxes.map((b) => (
-          <option key={b.id} value={b.id}>
-            {b.code}
-          </option>
-        ))}
-      </select>
-    </div>
-
-    <button
-      type="button"
-      onClick={requestMoveSelected}
-      disabled={busy || selectedIds.size === 0 || !bulkDestBoxId}
-      style={{
-        background: "#111",
-        color: "#fff",
-        fontWeight: 900,
-        padding: "10px 16px",
-        borderRadius: 14,
-      }}
-    >
-      {busy ? "Moving…" : "Move"}
-    </button>
-  </div>
-)}
-
     </main>
   );
 }
