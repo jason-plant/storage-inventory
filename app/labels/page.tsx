@@ -55,7 +55,7 @@ export default function LabelsPage() {
       for (const b of boxes) {
         const url = `${origin}/box/${encodeURIComponent(b.code)}`;
         // Smaller size prints better on label sheets
-        const dataUrl = await QRCode.toDataURL(url, { margin: 1, width: 220 });
+        const dataUrl = await QRCode.toDataURL(url, { margin: 1, width: 320 });
         next[b.code] = dataUrl;
       }
 
@@ -109,7 +109,7 @@ export default function LabelsPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
+          gridTemplateColumns: "repeat(2, 1fr)",
           gap: 18,
         }}
       >
@@ -118,7 +118,7 @@ export default function LabelsPage() {
             key={b.id}
             style={{
               border: "1px solid #000",
-              padding: 10,
+              padding: 14,
               borderRadius: 8,
               breakInside: "avoid",
             }}
@@ -134,7 +134,7 @@ export default function LabelsPage() {
                 <img
                   src={qrMap[b.code]}
                   alt={`QR for ${b.code}`}
-                  style={{ width: "100%", maxWidth: 180 }}
+                  style={{ width: "100%", maxWidth: 240 }}
                 />
               ) : (
                 <div style={{ fontSize: 12, opacity: 0.7 }}>Generating QR…</div>
