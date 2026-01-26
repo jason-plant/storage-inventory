@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { supabase } from "../../../lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
+import RequireAuth from "../../components/RequireAuth";
 
 type LocationRow = {
   id: string;
@@ -72,69 +73,82 @@ export default function LocationPage() {
     load();
   }, [locationId]);
 
-  if (loading) return <main style={{ padding: 16 }}><p>Loading…</p></main>;
-  if (error) return <main style={{ padding: 16 }}><p style={{ color: "crimson" }}>{error}</p></main>;
-  if (!location) return <main style={{ padding: 16 }}><p>Location not found.</p></main>;
-
   return (
-    <main style={{ paddingBottom: 90 }}>
-      <h1 style={{ margin: "6px 0 6px" }}>{location.name}</h1>
-      <p style={{ marginTop: 0, opacity: 0.75 }}>Boxes in this location</p>
+    <RequireAuth>
+      {loading ? (
+        <main style={{ padding: 16 }}>
+          <p>Loading…</p>
+        </main>
+      ) : error ? (
+        <main style={{ padding: 16 }}>
+          <p style={{ color: "crimson" }}>{error}</p>
+        </main>
+      ) : !location ? (
+        <main style={{ padding: 16 }}>
+          <p>Location not found.</p>
+        </main>
+      ) : (
+        <main style={{ paddingBottom: 90 }}>
+          <h1 style={{ margin: "6px 0 6px" }}>{location.name}</h1>
+          <p style={{ marginTop: 0, opacity: 0.75 }}>Boxes in this location</p>
 
-      {boxes.length === 0 && <p style={{ marginTop: 16 }}>No boxes here yet.</p>}
+          {boxes.length === 0 && <p style={{ marginTop: 16 }}>No boxes here yet.</p>}
 
-      <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
-        {boxes.map((b) => (
+          <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+            {boxes.map((b) => (
+              <a
+                key={b.id}
+                href={`/box/${encodeURIComponent(b.code)}`}
+                className="tap-btn"
+                style={{
+                  ...cardStyle,
+                  display: "block",
+                  textDecoration: "none",
+                  color: "#111",
+                }}
+              >
+                <div style={{ fontWeight: 900, fontSize: 16 }}>{b.code}</div>
+                {b.name && <div style={{ marginTop: 6, opacity: 0.85 }}>{b.name}</div>}
+              </a>
+            ))}
+          </div>
+
+          {/* FAB: Add box in this location */}
           <a
-            key={b.id}
-            href={`/box/${encodeURIComponent(b.code)}`}
+            href={`/locations/${encodeURIComponent(location.id)}/new-box`}
+            aria-label="Add box"
             style={{
-              ...cardStyle,
-              display: "block",
+              position: "fixed",
+              right: 18,
+              bottom: 18,
+              width: 58,
+              height: 58,
+              borderRadius: 999,
+              background: "#111",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               textDecoration: "none",
-              color: "#111",
+              boxShadow: "0 14px 30px rgba(0,0,0,0.25)",
+              zIndex: 2000,
             }}
           >
-            <div style={{ fontWeight: 900, fontSize: 16 }}>{b.code}</div>
-            {b.name && <div style={{ marginTop: 6, opacity: 0.85 }}>{b.name}</div>}
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
           </a>
-        ))}
-      </div>
-
-      {/* FAB: Add box in this location */}
-      <a
-        href={`/locations/${encodeURIComponent(location.id)}/new-box`}
-        aria-label="Add box"
-        style={{
-          position: "fixed",
-          right: 18,
-          bottom: 18,
-          width: 58,
-          height: 58,
-          borderRadius: 999,
-          background: "#111",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          textDecoration: "none",
-          boxShadow: "0 14px 30px rgba(0,0,0,0.25)",
-          zIndex: 2000,
-        }}
-      >
-        <svg
-          width="26"
-          height="26"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="white"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      </a>
-    </main>
+        </main>
+      )}
+    </RequireAuth>
   );
 }
