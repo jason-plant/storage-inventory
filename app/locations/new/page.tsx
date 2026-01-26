@@ -3,48 +3,50 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
+import RequireAuth from "../../components/RequireAuth";
 
 export default function NewLocationPage() {
+  return (
+    <RequireAuth>
+      <NewLocationInner />
+    </RequireAuth>
+  );
+}
+
+function NewLocationInner() {
   const router = useRouter();
+
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  async function createLocation() {
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setErr("Location name is required.");
+  async function save() {
+    if (!name.trim()) {
+      setError("Location name is required.");
       return;
     }
 
     setBusy(true);
-    setErr(null);
+    setError(null);
 
     const res = await supabase
       .from("locations")
-      .insert({ name: trimmed })
+      .insert({ name: name.trim() })
       .select("id")
       .single();
 
-    if (res.error) {
-      setErr(res.error.message);
+    if (res.error || !res.data) {
+      setError(res.error?.message || "Failed to create location.");
       setBusy(false);
       return;
     }
 
+    // back to locations list
     router.push("/locations");
-    router.refresh();
   }
 
   return (
-    <main style={{ paddingBottom: 90 }}>
-      <h1 style={{ margin: "6px 0 6px" }}>Add Location</h1>
-      <p style={{ marginTop: 0, opacity: 0.75 }}>
-        Example: Shed, Loft, Storage Container
-      </p>
-
-      {err && <p style={{ color: "crimson" }}>Error: {err}</p>}
-
+    <main>
       <div
         style={{
           background: "#fff",
@@ -52,31 +54,33 @@ export default function NewLocationPage() {
           borderRadius: 18,
           padding: 14,
           boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
-          display: "grid",
-          gap: 10,
-          maxWidth: 520,
         }}
       >
-        <input
-          placeholder="Location name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          autoFocus
-        />
+        <h1 style={{ marginTop: 6 }}>New Location</h1>
+        {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button type="button" onClick={() => router.push("/locations")} disabled={busy}>
-            Cancel
-          </button>
+        <div style={{ display: "grid", gap: 12 }}>
+          <input
+            placeholder="Location name (e.g. Shed, Loft, Garage)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+          />
 
-          <button
-            type="button"
-            onClick={createLocation}
-            disabled={busy || !name.trim()}
-            style={{ background: "#111", color: "#fff" }}
-          >
-            {busy ? "Saving..." : "Save location"}
-          </button>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" onClick={() => router.push("/locations")} disabled={busy}>
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={save}
+              disabled={busy || !name.trim()}
+              style={{ background: "#111", color: "#fff" }}
+            >
+              {busy ? "Saving..." : "Save location"}
+            </button>
+          </div>
         </div>
       </div>
     </main>
