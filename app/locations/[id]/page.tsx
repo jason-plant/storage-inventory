@@ -31,7 +31,6 @@ export default function LocationPage() {
       setLoading(true);
       setError(null);
 
-      // Load location
       const locRes = await supabase
         .from("locations")
         .select("id, name")
@@ -46,7 +45,6 @@ export default function LocationPage() {
 
       setLocation(locRes.data as LocationRow);
 
-      // Load boxes in this location
       const boxRes = await supabase
         .from("boxes")
         .select("id, code, name")
@@ -91,15 +89,11 @@ export default function LocationPage() {
   }
 
   return (
-    <main style={{ padding: 16, maxWidth: 900, margin: "0 auto", paddingBottom: 90 }}>
-      <h1 style={{ marginTop: 6 }}>{location.name}</h1>
-      <p style={{ opacity: 0.75, marginTop: 6 }}>
-        Boxes stored in this location
-      </p>
+    <main style={{ paddingBottom: 90 }}>
+      <h1 style={{ margin: "6px 0 6px" }}>{location.name}</h1>
+      <p style={{ marginTop: 0, opacity: 0.75 }}>Boxes in this location</p>
 
-      {boxes.length === 0 && (
-        <p style={{ marginTop: 16 }}>No boxes in this location yet.</p>
-      )}
+      {boxes.length === 0 && <p style={{ marginTop: 16 }}>No boxes here yet.</p>}
 
       <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
         {boxes.map((b) => (
@@ -113,24 +107,22 @@ export default function LocationPage() {
               justifyContent: "space-between",
               alignItems: "center",
               gap: 12,
+              color: "#111",
+              textDecoration: "none",
             }}
           >
             <div>
               <div style={{ fontWeight: 900 }}>{b.code}</div>
-              {b.name && (
-                <div style={{ opacity: 0.85, marginTop: 4 }}>
-                  {b.name}
-                </div>
-              )}
+              {b.name && <div style={{ opacity: 0.85, marginTop: 4 }}>{b.name}</div>}
             </div>
             <span style={{ opacity: 0.6 }}>Open →</span>
           </a>
         ))}
       </div>
 
-      {/* Optional: add box in this location later */}
+      {/* FAB: Add box in this location */}
       <a
-        href={`/boxes/new?location=${encodeURIComponent(location.id)}`}
+        href={`/locations/${encodeURIComponent(location.id)}/new-box`}
         aria-label="Add box"
         style={{
           position: "fixed",
@@ -145,6 +137,7 @@ export default function LocationPage() {
           justifyContent: "center",
           textDecoration: "none",
           boxShadow: "0 14px 30px rgba(0,0,0,0.25)",
+          zIndex: 2000,
         }}
       >
         <svg
