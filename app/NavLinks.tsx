@@ -47,31 +47,19 @@ export default function NavLinks() {
     []
   );
 
-  // Close on route change
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
-  // Escape closes
   useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+    if (open && listRef.current) {
+      listRef.current.scrollTop = 0;
     }
-    if (open) window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
-
-  // ✅ KEY FIX: when opening, force scroll to TOP
-  useEffect(() => {
-    if (!open) return;
-    // wait a tick for DOM to render
-    requestAnimationFrame(() => {
-      if (listRef.current) listRef.current.scrollTop = 0;
-    });
   }, [open]);
 
   return (
     <>
+      {/* Menu button */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -82,65 +70,65 @@ export default function NavLinks() {
           display: "inline-flex",
           gap: 10,
           alignItems: "center",
-          justifyContent: "center",
         }}
-        aria-label="Open menu"
       >
-        <span aria-hidden>☰</span> Menu
+        ☰ Menu
       </button>
 
+      {/* Overlay */}
       {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
-          }}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.35)",
-            zIndex: 5000,
-            display: "flex",
-            alignItems: "flex-end",
-            justifyContent: "center",
-            padding: 12,
-          }}
-        >
+        <>
+          {/* Dark backdrop */}
+          <div
+            onClick={() => setOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.35)",
+              zIndex: 5000,
+            }}
+          />
+
+          {/* ✅ TRUE bottom sheet */}
           <div
             style={{
-              width: "100%",
-              maxWidth: 520,
+              position: "fixed",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 6000,
+
               background: "#fff",
-              borderRadius: 20,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
               border: "1px solid #e5e7eb",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+              boxShadow: "0 -20px 60px rgba(0,0,0,0.25)",
+
               padding: 14,
-              height: "min(340px, 65vh)",
+              paddingBottom: "calc(env(safe-area-inset-bottom) + 14px)",
+
+              height: "min(360px, 70vh)",
               display: "flex",
               flexDirection: "column",
-              overflow: "hidden",
             }}
           >
+            {/* Header */}
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                gap: 10,
-                flex: "0 0 auto",
+                marginBottom: 10,
               }}
             >
               <div style={{ fontWeight: 900, fontSize: 18 }}>Menu</div>
 
               <button
-                type="button"
                 onClick={() => setOpen(false)}
-                aria-label="Close menu"
                 style={{
+                  width: 40,
+                  height: 40,
                   borderRadius: 999,
-                  width: 42,
-                  height: 42,
                   padding: 0,
                   fontWeight: 900,
                 }}
@@ -149,17 +137,15 @@ export default function NavLinks() {
               </button>
             </div>
 
+            {/* Scrollable menu list */}
             <div
               ref={listRef}
               style={{
-                marginTop: 12,
-                display: "grid",
-                gap: 10,
+                flex: 1,
                 overflowY: "auto",
                 WebkitOverflowScrolling: "touch",
-                flex: "1 1 auto",
-                minHeight: 0,
-                paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)",
+                display: "grid",
+                gap: 10,
               }}
             >
               {links.map((l) => {
@@ -169,20 +155,20 @@ export default function NavLinks() {
                     key={l.href}
                     href={l.href}
                     className="tap-btn"
-                    style={{ ...itemBase, ...(active ? itemActive : null) }}
-                    aria-current={active ? "page" : undefined}
+                    style={{
+                      ...itemBase,
+                      ...(active ? itemActive : null),
+                    }}
                     onClick={() => setOpen(false)}
                   >
                     <span>{l.label}</span>
-                    <span aria-hidden style={{ opacity: active ? 0.9 : 0.45 }}>
-                      ›
-                    </span>
+                    <span style={{ opacity: 0.4 }}>›</span>
                   </a>
                 );
               })}
             </div>
           </div>
-        </div>
+        </>
       )}
     </>
   );
