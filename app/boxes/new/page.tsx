@@ -6,6 +6,11 @@ import { supabase } from "../../../lib/supabaseClient";
 
 type BoxMini = { code: string };
 
+type LocationRow = {
+  id: string;
+  name: string;
+};
+
 function pad3(n: number) {
   return String(n).padStart(3, "0");
 }
@@ -20,22 +25,43 @@ export default function NewBoxPage() {
   const router = useRouter();
 
   const [existingCodes, setExistingCodes] = useState<string[]>([]);
+  const [locations, setLocations] = useState<LocationRow[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
-  const [location, setLocation] = useState("");
+  const [locationId, setLocationId] = useState<string>("");
 
   useEffect(() => {
-    async function loadCodes() {
+    async function loadData() {
       setLoading(true);
-      const res = await supabase.from("boxes").select("code").order("code");
-      setExistingCodes((res.data ?? []).map((b: BoxMini) => b.code));
+      setError(null);
+
+      // Load existing box codes (for auto numbering)
+      const codesRes = await supabase.from("boxes").select("code").order("code");
+      if (codesRes.error) {
+        setError(codesRes.error.message);
+        setExistingCodes([]);
+      } else {
+        setExistingCodes((codesRes.data ?? []).map((b: BoxMini) => b.code));
+      }
+
+      // Load locations for dropdown
+      const locRes = await supabase.from("locations").select("id, name").order("name");
+      if (locRes.error) {
+        setError((prev) => prev ?? locRes.error.message);
+        setLocations([]);
+      } else {
+        setLocations((locRes.data ?? []) as LocationRow[]);
+      }
+
       setLoading(false);
     }
-    loadCodes();
+
+    loadData();
   }, []);
 
   const nextAutoCode = useMemo(() => {
@@ -66,7 +92,7 @@ export default function NewBoxPage() {
       {
         code: trimmed.toUpperCase(),
         name: name.trim() || null,
-        location: location.trim() || null,
+        location_id: locationId || null,
       },
     ]);
 
@@ -76,7 +102,6 @@ export default function NewBoxPage() {
       return;
     }
 
-    // Go back to boxes page
     router.push("/boxes");
   }
 
@@ -106,8 +131,13 @@ export default function NewBoxPage() {
               onChange={(e) => setCode(e.target.value)}
               placeholder='Code e.g. BOX-001'
               style={{ flex: 1, minWidth: 220 }}
+              disabled={busy}
             />
-            <button type="button" onClick={() => setCode(nextAutoCode)} disabled={busy || loading}>
+            <button
+              type="button"
+              onClick={() => setCode(nextAutoCode)}
+              disabled={busy || loading}
+            >
               Auto ({nextAutoCode})
             </button>
           </div>
@@ -116,13 +146,21 @@ export default function NewBoxPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name (optional)"
+            disabled={busy}
           />
 
-          <input
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="Location (optional)"
-          />
+          <select
+            value={locationId}
+            onChange={(e) => setLocationId(e.target.value)}
+            disabled={busy || loading}
+          >
+            <option value="">Select location (optional)</option>
+            {locations.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button type="button" onClick={() => router.push("/boxes")} disabled={busy}>
