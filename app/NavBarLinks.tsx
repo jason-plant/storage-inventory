@@ -2,6 +2,7 @@
 
 import React from "react";
 import { usePathname } from "next/navigation";
+import { useAuth } from "./lib/auth";
 
 const linkStyle: React.CSSProperties = {
   textDecoration: "none",
@@ -25,16 +26,14 @@ const activeStyle: React.CSSProperties = {
 };
 
 function isActive(pathname: string, href: string) {
-  // highlight Boxes tab on /boxes and /box/...
   if (href === "/boxes") return pathname === "/boxes" || pathname.startsWith("/box/");
-  // highlight Locations on /locations and /locations/...
   if (href === "/locations") return pathname === "/locations" || pathname.startsWith("/locations/");
-  // default
   return pathname === href || pathname.startsWith(href + "/");
 }
 
 export default function NavBarLinks() {
   const pathname = usePathname() || "/";
+  const { user, loading, signOut } = useAuth();
 
   const links = [
     { href: "/locations", label: "Locations" },
@@ -60,6 +59,25 @@ export default function NavBarLinks() {
           </a>
         );
       })}
+
+      {!loading && !user && (
+        <a href="/login" className="tap-btn" style={linkStyle}>
+          Log in
+        </a>
+      )}
+
+      {!loading && user && (
+        <button
+          type="button"
+          onClick={async () => {
+            await signOut();
+            window.location.href = "/login";
+          }}
+          style={{ ...linkStyle, cursor: "pointer" }}
+        >
+          Log out
+        </button>
+      )}
     </div>
   );
 }

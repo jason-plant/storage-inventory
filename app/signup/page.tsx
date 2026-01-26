@@ -25,6 +25,10 @@ export default function SignupPage() {
     const res = await supabase.auth.signUp({
       email: email.trim(),
       password,
+      options: {
+        emailRedirectTo:
+          "https://storage-inventory-git-main-jasons-projects-b71e691b.vercel.app/login",
+      },
     });
 
     if (res.error) {
@@ -33,13 +37,21 @@ export default function SignupPage() {
       return;
     }
 
-    setMsg("Account created. If email confirmation is enabled, check your inbox. Otherwise you can log in now.");
+    setMsg("Account created. Check your email on your phone and confirm the account, then return to Login.");
     setBusy(false);
   }
 
   return (
-    <main>
-      <div style={{ padding: 16, borderRadius: 18, border: "1px solid #e5e7eb", background: "#fff", boxShadow: "0 1px 10px rgba(0,0,0,0.06)" }}>
+    <main style={{ paddingBottom: 90 }}>
+      <div
+        style={{
+          padding: 16,
+          borderRadius: 18,
+          border: "1px solid #e5e7eb",
+          background: "#fff",
+          boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
+        }}
+      >
         <h1 style={{ marginTop: 0 }}>Sign up</h1>
 
         <form onSubmit={onSignup} style={{ display: "grid", gap: 10 }}>
@@ -49,6 +61,7 @@ export default function SignupPage() {
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
           />
+
           <input
             placeholder="Password (min 6 chars)"
             type="password"
@@ -57,14 +70,36 @@ export default function SignupPage() {
             autoComplete="new-password"
           />
 
-          {error && <div style={{ color: "crimson", fontWeight: 700 }}>Error: {error}</div>}
-          {msg && <div style={{ color: "#0f766e", fontWeight: 700 }}>{msg}</div>}
+          {error && (
+            <div style={{ color: "crimson", fontWeight: 700 }}>
+              Error: {error}
+            </div>
+          )}
+          {msg && (
+            <div style={{ color: "#0f766e", fontWeight: 700 }}>{msg}</div>
+          )}
 
-          <button type="submit" disabled={busy || !email.trim() || password.length < 6}>
+          <button
+            type="submit"
+            disabled={busy || !email.trim() || password.length < 6}
+          >
             {busy ? "Creating..." : "Create account"}
           </button>
 
-          <a className="tap-btn" href="/login" style={{ textAlign: "center", padding: 12, borderRadius: 14, border: "1px solid #ddd", background: "#fff", textDecoration: "none" }}>
+          <a
+            className="tap-btn"
+            href="/login"
+            style={{
+              textAlign: "center",
+              padding: 12,
+              borderRadius: 14,
+              border: "1px solid #ddd",
+              background: "#fff",
+              textDecoration: "none",
+              color: "#111",
+              fontWeight: 800,
+            }}
+          >
             Back to login
           </a>
         </form>
