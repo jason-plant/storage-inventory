@@ -46,12 +46,10 @@ export default function NavLinks() {
     []
   );
 
-  // Close menu when route changes (so after you tap a link it closes)
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
-  // Escape key closes menu (nice on desktop)
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -62,7 +60,6 @@ export default function NavLinks() {
 
   return (
     <>
-      {/* Menu button */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -80,7 +77,6 @@ export default function NavLinks() {
         <span aria-hidden>☰</span> Menu
       </button>
 
-      {/* Menu overlay */}
       {open && (
         <div
           role="dialog"
@@ -99,7 +95,6 @@ export default function NavLinks() {
             padding: 12,
           }}
         >
-          {/* Bottom sheet */}
           <div
             style={{
               width: "100%",
@@ -110,6 +105,12 @@ export default function NavLinks() {
               boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
               padding: 14,
               paddingBottom: "calc(env(safe-area-inset-bottom) + 14px)",
+
+              /* ✅ Key fix: keep the sheet LOWER and scrollable */
+              maxHeight: "70vh",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             <div
@@ -118,6 +119,7 @@ export default function NavLinks() {
                 justifyContent: "space-between",
                 alignItems: "center",
                 gap: 10,
+                flex: "0 0 auto",
               }}
             >
               <div style={{ fontWeight: 900, fontSize: 18 }}>Menu</div>
@@ -138,7 +140,16 @@ export default function NavLinks() {
               </button>
             </div>
 
-            <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+            {/* ✅ Scroll area */}
+            <div
+              style={{
+                display: "grid",
+                gap: 10,
+                marginTop: 12,
+                overflowY: "auto",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
               {links.map((l) => {
                 const active = isActive(pathname, l.href);
                 return (
@@ -154,7 +165,6 @@ export default function NavLinks() {
                     onClick={() => setOpen(false)}
                   >
                     <span>{l.label}</span>
-                    {/* No "Open →" text. Just a subtle chevron for affordance */}
                     <span aria-hidden style={{ opacity: active ? 0.9 : 0.45 }}>
                       ›
                     </span>
