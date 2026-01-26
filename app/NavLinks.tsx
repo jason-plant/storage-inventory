@@ -1,31 +1,31 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 
-const baseStyle: React.CSSProperties = {
+const itemBase: React.CSSProperties = {
   textDecoration: "none",
   color: "#111",
-  border: "1px solid #ddd",
-  padding: "10px 12px",
-  borderRadius: 14,
-  fontSize: 14,
-  fontWeight: 700,
+  border: "1px solid #e5e7eb",
+  padding: "12px 12px",
+  borderRadius: 16,
+  fontSize: 16,
+  fontWeight: 800,
   background: "#fff",
-  display: "inline-flex",
+  display: "flex",
   alignItems: "center",
-  justifyContent: "center",
-  transition: "transform 120ms ease, box-shadow 120ms ease, background 120ms ease, color 120ms ease, border-color 120ms ease",
+  justifyContent: "space-between",
+  gap: 10,
+  boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
 };
 
-const activeStyle: React.CSSProperties = {
+const itemActive: React.CSSProperties = {
   background: "#111",
   color: "#fff",
   borderColor: "#111",
 };
 
 function isActive(pathname: string, href: string) {
-  // Special cases so sub-pages still highlight the right tab
   if (href === "/boxes") return pathname === "/boxes" || pathname.startsWith("/box/");
   if (href === "/locations") return pathname === "/locations" || pathname.startsWith("/locations/");
   return pathname === href || pathname.startsWith(href + "/");
@@ -33,34 +33,138 @@ function isActive(pathname: string, href: string) {
 
 export default function NavLinks() {
   const pathname = usePathname() || "/";
+  const [open, setOpen] = useState(false);
 
-  const links = [
-    { href: "/locations", label: "Locations" },
-    { href: "/boxes", label: "Boxes" },
-    { href: "/search", label: "Search" },
-    { href: "/labels", label: "Labels" },
-    { href: "/scan", label: "Scan QR" },
-  ];
+  const links = useMemo(
+    () => [
+      { href: "/locations", label: "Locations" },
+      { href: "/boxes", label: "Boxes" },
+      { href: "/search", label: "Search" },
+      { href: "/labels", label: "Labels" },
+      { href: "/scan", label: "Scan QR" },
+    ],
+    []
+  );
+
+  // Close menu when route changes (so after you tap a link it closes)
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  // Escape key closes menu (nice on desktop)
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    if (open) window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
 
   return (
-    <div className="nav-links" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-      {links.map((l) => {
-        const active = isActive(pathname, l.href);
-        return (
-          <a
-            key={l.href}
-            href={l.href}
-            className="tap-btn"
+    <>
+      {/* Menu button */}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        style={{
+          borderRadius: 16,
+          padding: "10px 12px",
+          fontWeight: 900,
+          display: "inline-flex",
+          gap: 10,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        aria-label="Open menu"
+      >
+        <span aria-hidden>☰</span> Menu
+      </button>
+
+      {/* Menu overlay */}
+      {open && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setOpen(false);
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            zIndex: 5000,
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+            padding: 12,
+          }}
+        >
+          {/* Bottom sheet */}
+          <div
             style={{
-              ...baseStyle,
-              ...(active ? activeStyle : null),
+              width: "100%",
+              maxWidth: 520,
+              background: "#fff",
+              borderRadius: 20,
+              border: "1px solid #e5e7eb",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+              padding: 14,
+              paddingBottom: "calc(env(safe-area-inset-bottom) + 14px)",
             }}
-            aria-current={active ? "page" : undefined}
           >
-            {l.label}
-          </a>
-        );
-      })}
-    </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <div style={{ fontWeight: 900, fontSize: 18 }}>Menu</div>
+
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close menu"
+                style={{
+                  borderRadius: 999,
+                  width: 42,
+                  height: 42,
+                  padding: 0,
+                  fontWeight: 900,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+              {links.map((l) => {
+                const active = isActive(pathname, l.href);
+                return (
+                  <a
+                    key={l.href}
+                    href={l.href}
+                    className="tap-btn"
+                    style={{
+                      ...itemBase,
+                      ...(active ? itemActive : null),
+                    }}
+                    aria-current={active ? "page" : undefined}
+                    onClick={() => setOpen(false)}
+                  >
+                    <span>{l.label}</span>
+                    {/* No "Open →" text. Just a subtle chevron for affordance */}
+                    <span aria-hidden style={{ opacity: active ? 0.9 : 0.45 }}>
+                      ›
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
