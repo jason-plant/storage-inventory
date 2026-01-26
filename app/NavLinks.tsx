@@ -60,6 +60,7 @@ export default function NavLinks() {
 
   return (
     <>
+      {/* Menu button */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -77,6 +78,7 @@ export default function NavLinks() {
         <span aria-hidden>☰</span> Menu
       </button>
 
+      {/* Overlay */}
       {open && (
         <div
           role="dialog"
@@ -87,14 +89,17 @@ export default function NavLinks() {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.45)",
+            background: "rgba(0,0,0,0.35)",
             zIndex: 5000,
+
+            /* ✅ Force bottom sheet positioning */
             display: "flex",
             alignItems: "flex-end",
             justifyContent: "center",
             padding: 12,
           }}
         >
+          {/* Bottom sheet */}
           <div
             style={{
               width: "100%",
@@ -104,15 +109,17 @@ export default function NavLinks() {
               border: "1px solid #e5e7eb",
               boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
               padding: 14,
-              paddingBottom: "calc(env(safe-area-inset-bottom) + 14px)",
 
-              /* ✅ Key fix: keep the sheet LOWER and scrollable */
-              maxHeight: "70vh",
+              /* ✅ Fixed height so it stays LOW */
+              height: "min(320px, 70vh)",
               overflow: "hidden",
+
+              /* ✅ Layout */
               display: "flex",
               flexDirection: "column",
             }}
           >
+            {/* Header */}
             <div
               style={{
                 display: "flex",
@@ -140,14 +147,15 @@ export default function NavLinks() {
               </button>
             </div>
 
-            {/* ✅ Scroll area */}
+            {/* Scroll list */}
             <div
               style={{
+                marginTop: 12,
                 display: "grid",
                 gap: 10,
-                marginTop: 12,
                 overflowY: "auto",
                 WebkitOverflowScrolling: "touch",
+                paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)",
               }}
             >
               {links.map((l) => {
