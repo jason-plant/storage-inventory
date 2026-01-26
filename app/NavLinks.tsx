@@ -52,9 +52,10 @@ export default function NavLinks() {
   }, [pathname]);
 
   useEffect(() => {
-    if (open && listRef.current) {
-      listRef.current.scrollTop = 0;
-    }
+    if (!open) return;
+    requestAnimationFrame(() => {
+      if (listRef.current) listRef.current.scrollTop = 0;
+    });
   }, [open]);
 
   return (
@@ -75,10 +76,9 @@ export default function NavLinks() {
         ☰ Menu
       </button>
 
-      {/* Overlay */}
       {open && (
         <>
-          {/* Dark backdrop */}
+          {/* Backdrop */}
           <div
             onClick={() => setOpen(false)}
             style={{
@@ -89,20 +89,22 @@ export default function NavLinks() {
             }}
           />
 
-          {/* ✅ TRUE bottom sheet */}
+          {/* ✅ Centered bottom sheet (NOT full width) */}
           <div
             style={{
               position: "fixed",
-              left: 0,
-              right: 0,
-              bottom: 0,
+              left: "50%",
+              transform: "translateX(-50%)",
+              bottom: 12, // small gap from the bottom edge
               zIndex: 6000,
 
+              width: "calc(100% - 24px)",
+              maxWidth: 520,
+
               background: "#fff",
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
+              borderRadius: 20,
               border: "1px solid #e5e7eb",
-              boxShadow: "0 -20px 60px rgba(0,0,0,0.25)",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
 
               padding: 14,
               paddingBottom: "calc(env(safe-area-inset-bottom) + 14px)",
@@ -110,6 +112,7 @@ export default function NavLinks() {
               height: "min(360px, 70vh)",
               display: "flex",
               flexDirection: "column",
+              overflow: "hidden",
             }}
           >
             {/* Header */}
@@ -132,16 +135,18 @@ export default function NavLinks() {
                   padding: 0,
                   fontWeight: 900,
                 }}
+                aria-label="Close menu"
               >
                 ✕
               </button>
             </div>
 
-            {/* Scrollable menu list */}
+            {/* Scrollable list */}
             <div
               ref={listRef}
               style={{
                 flex: 1,
+                minHeight: 0,
                 overflowY: "auto",
                 WebkitOverflowScrolling: "touch",
                 display: "grid",
@@ -155,14 +160,13 @@ export default function NavLinks() {
                     key={l.href}
                     href={l.href}
                     className="tap-btn"
-                    style={{
-                      ...itemBase,
-                      ...(active ? itemActive : null),
-                    }}
+                    style={{ ...itemBase, ...(active ? itemActive : null) }}
                     onClick={() => setOpen(false)}
                   >
                     <span>{l.label}</span>
-                    <span style={{ opacity: 0.4 }}>›</span>
+                    <span aria-hidden style={{ opacity: 0.4 }}>
+                      ›
+                    </span>
                   </a>
                 );
               })}
