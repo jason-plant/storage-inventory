@@ -91,8 +91,6 @@ export default function NavLinks() {
             inset: 0,
             background: "rgba(0,0,0,0.35)",
             zIndex: 5000,
-
-            /* ✅ Force bottom sheet positioning */
             display: "flex",
             alignItems: "flex-end",
             justifyContent: "center",
@@ -110,13 +108,13 @@ export default function NavLinks() {
               boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
               padding: 14,
 
-              /* ✅ Fixed height so it stays LOW */
-              height: "min(320px, 70vh)",
-              overflow: "hidden",
+              // fixed-ish height, but NOT huge
+              height: "min(340px, 65vh)",
 
-              /* ✅ Layout */
+              // IMPORTANT: this makes the sheet layout behave
               display: "flex",
               flexDirection: "column",
+              overflow: "hidden",
             }}
           >
             {/* Header */}
@@ -147,7 +145,8 @@ export default function NavLinks() {
               </button>
             </div>
 
-            {/* Scroll list */}
+            {/* ✅ THIS is the real fix:
+                flex:1 + minHeight:0 so the list scrolls instead of pushing/clipping */}
             <div
               style={{
                 marginTop: 12,
@@ -155,6 +154,8 @@ export default function NavLinks() {
                 gap: 10,
                 overflowY: "auto",
                 WebkitOverflowScrolling: "touch",
+                flex: "1 1 auto",
+                minHeight: 0,
                 paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)",
               }}
             >
