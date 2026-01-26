@@ -118,6 +118,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               className="nav-links"
               style={{ display: "flex", gap: 10, flexWrap: "wrap" }}
             >
+              {/* NEW: Locations */}
+              <a href="/locations" style={linkStyle}>
+                Locations
+              </a>
+
               <a href="/boxes" style={linkStyle}>
                 Boxes
               </a>
