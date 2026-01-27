@@ -13,9 +13,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && user) {
-      window.location.href = "/locations";
-    }
+    if (!loading && user) window.location.href = "/locations";
   }, [loading, user]);
 
   async function onLogin(e: React.FormEvent) {
@@ -38,9 +36,11 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={{ maxWidth: 420, margin: "40px auto" }}>
+    <main style={{ paddingTop: 18, paddingBottom: 18 }}>
       <div
         style={{
+          maxWidth: 520,
+          margin: "0 auto",
           background: "#fff",
           border: "1px solid #e5e7eb",
           borderRadius: 18,
@@ -48,39 +48,60 @@ export default function LoginPage() {
           boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
         }}
       >
-        <h1 style={{ marginTop: 0 }}>Log in</h1>
-        <p style={{ opacity: 0.75, marginTop: 0 }}>
+        <h1 style={{ margin: "0 0 6px 0" }}>Log in</h1>
+        <div style={{ opacity: 0.75, marginBottom: 14 }}>
           Sign in to your inventory
-        </p>
+        </div>
 
         <form onSubmit={onLogin} style={{ display: "grid", gap: 12 }}>
-          <input
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-          />
+          <div style={{ display: "grid", gap: 8 }}>
+            <label style={{ fontWeight: 800, fontSize: 13, opacity: 0.8 }}>
+              Email
+            </label>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              placeholder="you@email.com"
+            />
+          </div>
 
-          <input
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-          />
+          <div style={{ display: "grid", gap: 8 }}>
+            <label style={{ fontWeight: 800, fontSize: 13, opacity: 0.8 }}>
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              placeholder="••••••••"
+            />
+          </div>
 
           {error && (
-            <div style={{ color: "crimson", fontWeight: 700 }}>
+            <div
+              style={{
+                color: "crimson",
+                fontWeight: 800,
+                background: "#fff1f2",
+                border: "1px solid #fecdd3",
+                padding: 10,
+                borderRadius: 14,
+              }}
+            >
               {error}
             </div>
           )}
 
           <button
             type="submit"
-            disabled={busy || !email || password.length < 6}
+            disabled={busy || !email.trim() || password.length < 6}
+            className="tap-btn"
             style={{
               background: "#111",
               color: "#fff",
+              border: "1px solid #111",
               fontWeight: 900,
             }}
           >
@@ -97,7 +118,7 @@ export default function LoginPage() {
               border: "1px solid #e5e7eb",
               background: "#fff",
               textDecoration: "none",
-              fontWeight: 800,
+              fontWeight: 900,
               color: "#111",
             }}
           >
