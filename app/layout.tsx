@@ -1,7 +1,8 @@
+"use client";
+
 import type { Metadata } from "next";
 import React from "react";
-import { AuthProvider } from "./lib/auth";
-import NavBarLinks from "./NavBarLinks"; // keep if you already have it
+import { usePathname } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Storage Inventory",
@@ -13,7 +14,29 @@ export const viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+const linkStyle: React.CSSProperties = {
+  textDecoration: "none",
+  color: "#111",
+  border: "1px solid #ddd",
+  padding: "10px 12px",
+  borderRadius: 14,
+  fontSize: 14,
+  fontWeight: 700,
+  background: "#fff",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+
+  // 👇 pages that should NOT show navbar
+  const hideNav =
+    pathname === "/login" ||
+    pathname === "/signup";
+
   return (
     <html lang="en">
       <body
@@ -25,18 +48,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           color: "#111",
         }}
       >
+        {/* GLOBAL STYLES */}
         <style>{`
           :root{
+            --card:#ffffff;
             --border:#e5e7eb;
             --shadow: 0 1px 10px rgba(0,0,0,0.06);
-            --shadow-press: 0 1px 6px rgba(0,0,0,0.10);
+            --radius: 16px;
           }
 
           input, select, button, textarea {
             font-size: 16px;
             border-radius: 14px;
             border: 1px solid var(--border);
-            padding: 12px 12px;
+            padding: 12px;
             box-sizing: border-box;
           }
 
@@ -45,7 +70,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             font-weight: 800;
             cursor: pointer;
             box-shadow: var(--shadow);
-            transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
           }
 
           button:disabled {
@@ -57,30 +81,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           a, button, input, select {
             -webkit-tap-highlight-color: transparent;
           }
-
-          button:active {
-            transform: scale(0.98);
-            box-shadow: var(--shadow-press);
-          }
-
-          .tap-btn {
-            box-shadow: var(--shadow);
-            transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, color 120ms ease, border-color 120ms ease;
-          }
-          .tap-btn:active {
-            transform: scale(0.98);
-            box-shadow: var(--shadow-press);
-          }
-
-          @media (max-width: 600px) {
-            .nav-wrap { flex-direction: column; align-items: flex-start; }
-            .nav-links { width: 100%; }
-            .nav-links a { flex: 1; text-align: center; }
-          }
         `}</style>
 
-        <AuthProvider>
-          {/* NAV BAR */}
+        {/* NAV BAR (hidden on login/signup) */}
+        {!hideNav && (
           <nav
             style={{
               position: "sticky",
@@ -92,7 +96,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }}
           >
             <div
-              className="nav-wrap"
               style={{
                 maxWidth: 1100,
                 margin: "0 auto",
@@ -101,10 +104,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: 12,
+                flexWrap: "wrap",
               }}
             >
               <a
-                href="/locations"
+                href="/boxes"
                 style={{
                   fontWeight: 900,
                   textDecoration: "none",
@@ -115,15 +119,37 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Storage Inventory
               </a>
 
-              <NavBarLinks />
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <a href="/locations" style={linkStyle}>
+                  Locations
+                </a>
+                <a href="/boxes" style={linkStyle}>
+                  Boxes
+                </a>
+                <a href="/search" style={linkStyle}>
+                  Search
+                </a>
+                <a href="/labels" style={linkStyle}>
+                  Labels
+                </a>
+                <a href="/scan" style={linkStyle}>
+                  Scan QR
+                </a>
+              </div>
             </div>
           </nav>
+        )}
 
-          {/* CONTENT */}
-          <div style={{ maxWidth: 1100, margin: "0 auto", padding: "14px 14px 28px" }}>
-            {children}
-          </div>
-        </AuthProvider>
+        {/* PAGE CONTENT */}
+        <div
+          style={{
+            maxWidth: 1100,
+            margin: "0 auto",
+            padding: hideNav ? "24px 14px" : "14px 14px 28px",
+          }}
+        >
+          {children}
+        </div>
       </body>
     </html>
   );
