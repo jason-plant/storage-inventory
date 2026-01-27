@@ -10,15 +10,55 @@ export default function NavBarLinks() {
 
   const isAuthPage = pathname === "/login" || pathname === "/signup";
 
+  // helper to detect active route (supports sub-pages)
+  const isActive = (path: string) =>
+    pathname === path || pathname.startsWith(path + "/");
+
   return (
-    <nav style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+    <nav
+      style={{
+        display: "flex",
+        gap: 10,
+        alignItems: "center",
+        flexWrap: "wrap",
+      }}
+    >
       {user ? (
         <>
-          <Link className="nav-btn" href="/locations">Locations</Link>
-          <Link className="nav-btn" href="/boxes">Boxes</Link>
-          <Link className="nav-btn" href="/search">Search</Link>
-          <Link className="nav-btn" href="/labels">Labels</Link>
-          <Link className="nav-btn" href="/scan">Scan QR</Link>
+          <Link
+            href="/locations"
+            className={`nav-btn ${isActive("/locations") ? "active" : ""}`}
+          >
+            Locations
+          </Link>
+
+          <Link
+            href="/boxes"
+            className={`nav-btn ${isActive("/boxes") ? "active" : ""}`}
+          >
+            Boxes
+          </Link>
+
+          <Link
+            href="/search"
+            className={`nav-btn ${isActive("/search") ? "active" : ""}`}
+          >
+            Search
+          </Link>
+
+          <Link
+            href="/labels"
+            className={`nav-btn ${isActive("/labels") ? "active" : ""}`}
+          >
+            Labels
+          </Link>
+
+          <Link
+            href="/scan"
+            className={`nav-btn ${isActive("/scan") ? "active" : ""}`}
+          >
+            Scan QR
+          </Link>
 
           <button className="nav-btn" onClick={signOut}>
             Log out
@@ -27,8 +67,12 @@ export default function NavBarLinks() {
       ) : (
         !isAuthPage && (
           <>
-            <Link className="nav-btn" href="/login">Log in</Link>
-            <Link className="nav-btn" href="/signup">Sign up</Link>
+            <Link className="nav-btn" href="/login">
+              Log in
+            </Link>
+            <Link className="nav-btn" href="/signup">
+              Sign up
+            </Link>
           </>
         )
       )}

@@ -68,3 +68,15 @@ body {
 .tap-btn.full {
   width: 100%;
 }
+/* ===== Active / selected nav button ===== */
+
+.nav-btn.active {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+.nav-btn.active:active {
+  transform: scale(0.96);
+}
