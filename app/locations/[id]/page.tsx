@@ -50,15 +50,13 @@ function LocationInner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // =========================
-  // MOVE BOXES MODE
-  // =========================
+  // ===== Move mode =====
   const [moveMode, setMoveMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const selectedRef = useRef<Set<string>>(new Set());
   const [destLocationId, setDestLocationId] = useState<string>("");
 
-  // Create location modal (for move flow)
+  // Create location modal (from move flow)
   const [newLocOpen, setNewLocOpen] = useState(false);
   const [newLocName, setNewLocName] = useState("");
 
@@ -71,18 +69,21 @@ function LocationInner() {
     boxIds: string[];
   } | null>(null);
 
-  // =========================
-  // EDIT BOX (RENAME)
-  // =========================
+  // ===== Edit box =====
   const [editBoxOpen, setEditBoxOpen] = useState(false);
   const editBoxRef = useRef<BoxRow | null>(null);
   const [editBoxName, setEditBoxName] = useState("");
 
-  // =========================
-  // DELETE BOX
-  // =========================
+  // ===== Delete box =====
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const boxToDeleteRef = useRef<BoxRow | null>(null);
+
+  function getStoragePathFromPublicUrl(url: string) {
+    const marker = "/item-photos/";
+    const idx = url.indexOf(marker);
+    if (idx === -1) return null;
+    return url.substring(idx + marker.length);
+  }
 
   async function load() {
     if (!locationId) return;
@@ -99,7 +100,6 @@ function LocationInner() {
       return;
     }
 
-    // Location (must belong to user)
     const locRes = await supabase
       .from("locations")
       .select("id, name")
@@ -115,21 +115,14 @@ function LocationInner() {
 
     setLocation(locRes.data as LocationRow);
 
-    // All locations (for destination dropdown)
     const allLocRes = await supabase
       .from("locations")
       .select("id, name")
       .eq("owner_id", userId)
       .order("name");
 
-    if (allLocRes.error) {
-      setError(allLocRes.error.message);
-      setAllLocations([]);
-    } else {
-      setAllLocations((allLocRes.data ?? []) as LocationMini[]);
-    }
+    setAllLocations((allLocRes.data ?? []) as LocationMini[]);
 
-    // Boxes in this location + item quantities (must belong to user)
     const boxRes = await supabase
       .from("boxes")
       .select("id, code, name, items ( quantity )")
@@ -144,18 +137,18 @@ function LocationInner() {
       setBoxes((boxRes.data ?? []) as BoxRow[]);
     }
 
-    // Reset move state
+    // Reset UI states
     setMoveMode(false);
     const empty = new Set<string>();
     setSelectedIds(empty);
     selectedRef.current = empty;
     setDestLocationId("");
 
-    // reset modals
-    setConfirmMoveOpen(false);
-    confirmMoveInfoRef.current = null;
     setNewLocOpen(false);
     setNewLocName("");
+
+    setConfirmMoveOpen(false);
+    confirmMoveInfoRef.current = null;
 
     setEditBoxOpen(false);
     editBoxRef.current = null;
@@ -172,9 +165,7 @@ function LocationInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationId]);
 
-  // =========================
-  // MOVE MODE HELPERS
-  // =========================
+  // ===== Move mode helpers =====
   function enterMoveMode() {
     setError(null);
     setMoveMode(true);
@@ -331,9 +322,7 @@ function LocationInner() {
     setBusy(false);
   }
 
-  // =========================
-  // EDIT BOX (RENAME)
-  // =========================
+  // ===== Edit box =====
   function openEditBox(b: BoxRow) {
     setError(null);
     editBoxRef.current = b;
@@ -377,9 +366,7 @@ function LocationInner() {
       return;
     }
 
-    setBoxes((prev) =>
-      prev.map((x) => (x.id === b.id ? { ...x, name: res.data.name } : x))
-    );
+    setBoxes((prev) => prev.map((x) => (x.id === b.id ? { ...x, name: res.data.name } : x)));
 
     setEditBoxOpen(false);
     editBoxRef.current = null;
@@ -387,20 +374,11 @@ function LocationInner() {
     setBusy(false);
   }
 
-  // =========================
-  // DELETE BOX
-  // =========================
+  // ===== Delete box =====
   function requestDeleteBox(b: BoxRow) {
     setError(null);
     boxToDeleteRef.current = b;
     setConfirmDeleteOpen(true);
-  }
-
-  function getStoragePathFromPublicUrl(url: string) {
-    const marker = "/item-photos/";
-    const idx = url.indexOf(marker);
-    if (idx === -1) return null;
-    return url.substring(idx + marker.length);
   }
 
   async function confirmDeleteBox() {
@@ -473,9 +451,6 @@ function LocationInner() {
     setBusy(false);
   }
 
-  // =========================
-  // RENDER STATES
-  // =========================
   if (loading) {
     return (
       <main style={{ padding: 16 }}>
@@ -484,18 +459,10 @@ function LocationInner() {
     );
   }
 
-  if (error && !location) {
-    return (
-      <main style={{ padding: 16 }}>
-        <p style={{ color: "crimson" }}>{error}</p>
-      </main>
-    );
-  }
-
   if (!location) {
     return (
       <main style={{ padding: 16 }}>
-        <p>Location not found.</p>
+        <p style={{ color: "crimson" }}>{error ?? "Location not found."}</p>
       </main>
     );
   }
@@ -506,6 +473,7 @@ function LocationInner() {
       <p style={{ marginTop: 0, opacity: 0.75 }}>Boxes in this location</p>
 
       {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {boxes.length === 0 && <p style={{ marginTop: 16 }}>No boxes here yet.</p>}
 
       {moveMode && (
         <div
@@ -514,7 +482,7 @@ function LocationInner() {
             border: "2px solid #111",
             borderRadius: 18,
             padding: 14,
-            boxShadow: "0 1px 10px rgba(0,0,0,0.10)",
+            boxShadow: "0 1px 10px rgba(0,0,0,0.1)",
             marginBottom: 12,
             marginTop: 10,
           }}
@@ -544,13 +512,10 @@ function LocationInner() {
         </div>
       )}
 
-      {boxes.length === 0 && <p style={{ marginTop: 16 }}>No boxes here yet.</p>}
-
       <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
         {boxes.map((b) => {
           const isSelected = selectedIds.has(b.id);
-          const totalQty =
-            b.items?.reduce((sum, it) => sum + (it.quantity ?? 0), 0) ?? 0;
+          const totalQty = b.items?.reduce((sum, it) => sum + (it.quantity ?? 0), 0) ?? 0;
 
           return (
             <a
@@ -577,16 +542,10 @@ function LocationInner() {
               <div style={{ display: "grid", gap: 6 }}>
                 <div style={{ fontWeight: 900, fontSize: 16 }}>{b.code}</div>
 
-                {b.name ? (
-                  <div style={{ fontWeight: 700 }}>{b.name}</div>
-                ) : (
-                  <div style={{ opacity: 0.6 }}>No name</div>
-                )}
+                {b.name ? <div style={{ fontWeight: 700 }}>{b.name}</div> : <div style={{ opacity: 0.6 }}>No name</div>}
 
-                {/* ✅ Item count pill (same style as boxes page) */}
                 <div
                   style={{
-                    marginTop: 2,
                     display: "inline-block",
                     padding: "4px 10px",
                     borderRadius: 999,
@@ -604,7 +563,6 @@ function LocationInner() {
                 {moveMode && isSelected && (
                   <div
                     style={{
-                      marginTop: 4,
                       display: "inline-block",
                       padding: "4px 10px",
                       borderRadius: 999,
@@ -620,7 +578,6 @@ function LocationInner() {
                 )}
               </div>
 
-              {/* Edit/Delete only when NOT in move mode */}
               {!moveMode && (
                 <div style={{ display: "flex", gap: 8 }}>
                   <button
@@ -728,7 +685,33 @@ function LocationInner() {
         </div>
       )}
 
-      {/* Move FAB */}
+      {/* ✅ Add Box FAB (bottom-right) */}
+      <a
+        href={`/locations/${encodeURIComponent(location.id)}/new-box`}
+        aria-label="Add box"
+        style={{
+          position: "fixed",
+          right: 18,
+          bottom: 18,
+          width: 58,
+          height: 58,
+          borderRadius: 999,
+          background: "#111",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textDecoration: "none",
+          boxShadow: "0 14px 30px rgba(0,0,0,0.25)",
+          zIndex: 2000,
+        }}
+      >
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </a>
+
+      {/* ✅ Move Boxes FAB (above add) */}
       <button
         type="button"
         onClick={() => (moveMode ? exitMoveMode() : enterMoveMode())}
@@ -736,7 +719,7 @@ function LocationInner() {
         style={{
           position: "fixed",
           right: 18,
-          bottom: 18,
+          bottom: 86,
           width: 58,
           height: 58,
           borderRadius: 999,
@@ -745,7 +728,7 @@ function LocationInner() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          boxShadow: "0 14px 30px rgba(0,0,0,0.20)",
+          boxShadow: "0 14px 30px rgba(0,0,0,0.2)",
           zIndex: 2000,
           cursor: "pointer",
         }}
@@ -775,9 +758,7 @@ function LocationInner() {
           setEditBoxName("");
         }}
       >
-        <p style={{ marginTop: 0, opacity: 0.85 }}>
-          Change the box name. This does not move the box.
-        </p>
+        <p style={{ marginTop: 0, opacity: 0.85 }}>Change the box name. This does not move the box.</p>
 
         <input
           value={editBoxName}
@@ -811,7 +792,7 @@ function LocationInner() {
         </div>
       </Modal>
 
-      {/* Create Location Modal (from move) */}
+      {/* Create Location Modal */}
       <Modal
         open={newLocOpen}
         title="Create new location"
@@ -821,9 +802,7 @@ function LocationInner() {
           setNewLocName("");
         }}
       >
-        <p style={{ marginTop: 0, opacity: 0.85 }}>
-          Type a name, create it, and it’ll be selected as the destination.
-        </p>
+        <p style={{ marginTop: 0, opacity: 0.85 }}>Type a name, create it, and it’ll be selected as the destination.</p>
 
         <input
           placeholder="Location name (e.g. Shed, Loft)"
@@ -873,8 +852,7 @@ function LocationInner() {
           return (
             <>
               <p style={{ marginTop: 0 }}>
-                Move <strong>{info.count}</strong> box(es) to{" "}
-                <strong>{info.toLocationName}</strong>?
+                Move <strong>{info.count}</strong> box(es) to <strong>{info.toLocationName}</strong>?
               </p>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -890,12 +868,7 @@ function LocationInner() {
                   Cancel
                 </button>
 
-                <button
-                  type="button"
-                  onClick={confirmMoveSelected}
-                  disabled={busy}
-                  style={{ background: "#111", color: "#fff" }}
-                >
+                <button type="button" onClick={confirmMoveSelected} disabled={busy} style={{ background: "#111", color: "#fff" }}>
                   {busy ? "Moving..." : "Yes, move"}
                 </button>
               </div>
@@ -917,9 +890,7 @@ function LocationInner() {
         <p style={{ marginTop: 0 }}>
           Delete <strong>{boxToDeleteRef.current?.code ?? "this box"}</strong>?
         </p>
-        <p style={{ marginTop: 0, opacity: 0.85 }}>
-          This will delete all items inside it and remove linked photos.
-        </p>
+        <p style={{ marginTop: 0, opacity: 0.85 }}>This will delete all items inside it and remove linked photos.</p>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
@@ -934,12 +905,7 @@ function LocationInner() {
             Cancel
           </button>
 
-          <button
-            type="button"
-            onClick={confirmDeleteBox}
-            disabled={busy}
-            style={{ background: "#ef4444", color: "#fff" }}
-          >
+          <button type="button" onClick={confirmDeleteBox} disabled={busy} style={{ background: "#ef4444", color: "#fff" }}>
             {busy ? "Deleting..." : "Delete"}
           </button>
         </div>
@@ -994,7 +960,6 @@ function Modal({
       >
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
           <h3 style={{ margin: 0 }}>{title}</h3>
-
           <button
             type="button"
             onClick={onClose}
