@@ -11,13 +11,11 @@ export default function NavBarLinks() {
 
   const isAuthPage = pathname === "/login" || pathname === "/signup";
 
-  // helper to detect active route (supports sub-pages)
   const isActive = (path: string) =>
     pathname === path || pathname.startsWith(path + "/");
 
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // close menu on route change
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
@@ -75,18 +73,17 @@ export default function NavBarLinks() {
         )}
       </nav>
 
-      {/* Mobile nav (burger) */}
-      <div
-        className="nav-mobile"
-        style={{
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-        }}
-      >
-        {/* Hide burger on login/signup if you prefer (keeps it clean) */}
-        {!isAuthPage && (
+      {/* Mobile burger pinned to top-right */}
+      {!isAuthPage && (
+        <div
+          className="nav-mobile"
+          style={{
+            position: "fixed",
+            top: "max(10px, env(safe-area-inset-top))",
+            right: "max(10px, env(safe-area-inset-right))",
+            zIndex: 5000,
+          }}
+        >
           <button
             type="button"
             className="nav-btn"
@@ -94,16 +91,17 @@ export default function NavBarLinks() {
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((v) => !v)}
             style={{
-              width: 44,
-              height: 44,
+              width: 46,
+              height: 46,
               padding: 0,
               borderRadius: 14,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+              background: "#fff",
             }}
           >
-            {/* burger / close icon */}
             {menuOpen ? (
               <span style={{ fontWeight: 900, fontSize: 18, lineHeight: 1 }}>
                 ✕
@@ -126,70 +124,74 @@ export default function NavBarLinks() {
               </svg>
             )}
           </button>
-        )}
 
-        {/* Backdrop (click to close) */}
-        {menuOpen && (
-          <button
-            type="button"
-            aria-label="Close menu"
-            onClick={() => setMenuOpen(false)}
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0,0,0,0.35)",
-              border: "none",
-              padding: 0,
-              margin: 0,
-              zIndex: 2999,
-            }}
-          />
-        )}
+          {/* Backdrop */}
+          {menuOpen && (
+            <button
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setMenuOpen(false)}
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.35)",
+                border: "none",
+                padding: 0,
+                margin: 0,
+                zIndex: 4999,
+              }}
+            />
+          )}
 
-        {/* Dropdown */}
-        {menuOpen && (
-          <div
-            style={{
-              position: "absolute",
-              top: 52,
-              right: 0,
-              zIndex: 3000,
-              width: "min(260px, calc(100vw - 24px))",
-              background: "#fff",
-              border: "1px solid #e5e7eb",
-              borderRadius: 16,
-              boxShadow: "0 16px 40px rgba(0,0,0,0.18)",
-              overflow: "hidden",
-            }}
-          >
-            <div style={{ padding: 10, display: "grid", gap: 8 }}>
-              {user ? (
-                <>
-                  {authedLinks.map((l) => (
-                    <Link
-                      key={l.href}
-                      href={l.href}
-                      className={`nav-btn ${isActive(l.href) ? "active" : ""}`}
-                      onClick={() => setMenuOpen(false)}
-                      style={{ width: "100%", justifyContent: "flex-start" }}
+          {/* Dropdown - opens inward from top-right */}
+          {menuOpen && (
+            <div
+              style={{
+                position: "absolute",
+                top: 54,
+                right: 0,
+                zIndex: 5001,
+                width: "min(280px, calc(100vw - 24px))",
+                background: "#fff",
+                border: "1px solid #e5e7eb",
+                borderRadius: 16,
+                boxShadow: "0 16px 40px rgba(0,0,0,0.18)",
+                overflow: "hidden",
+              }}
+            >
+              <div style={{ padding: 10, display: "grid", gap: 8 }}>
+                {user ? (
+                  <>
+                    {authedLinks.map((l) => (
+                      <Link
+                        key={l.href}
+                        href={l.href}
+                        className={`nav-btn ${isActive(l.href) ? "active" : ""}`}
+                        onClick={() => setMenuOpen(false)}
+                        style={{
+                          width: "100%",
+                          justifyContent: "flex-start",
+                        }}
+                      >
+                        {l.label}
+                      </Link>
+                    ))}
+
+                    <button
+                      className="nav-btn"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        signOut();
+                      }}
+                      style={{
+                        width: "100%",
+                        justifyContent: "flex-start",
+                      }}
                     >
-                      {l.label}
-                    </Link>
-                  ))}
-
-                  <button
-                    className="nav-btn"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      signOut();
-                    }}
-                    style={{ width: "100%", justifyContent: "flex-start" }}
-                  >
-                    Log out
-                  </button>
-                </>
-              ) : (
-                !isAuthPage && (
+                      Log out
+                    </button>
+                  </>
+                ) : (
                   <>
                     <Link
                       className="nav-btn"
@@ -208,14 +210,14 @@ export default function NavBarLinks() {
                       Sign up
                     </Link>
                   </>
-                )
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      {/* Simple responsive rules */}
+      {/* Responsive rules */}
       <style jsx>{`
         .nav-desktop {
           display: flex;
@@ -229,7 +231,7 @@ export default function NavBarLinks() {
             display: none !important;
           }
           .nav-mobile {
-            display: flex !important;
+            display: block !important;
           }
         }
       `}</style>
