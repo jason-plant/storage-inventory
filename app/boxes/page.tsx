@@ -60,8 +60,25 @@ function BoxesInner() {
     setLoading(true);
     setError(null);
 
-    // Load locations
-    const locRes = await supabase.from("locations").select("id,name").order("name");
+    // ✅ Get user (so we can filter per-user)
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+
+    if (authErr || !userId) {
+      setError(authErr?.message || "Not logged in.");
+      setLocations([]);
+      setBoxes([]);
+      setLoading(false);
+      return;
+    }
+
+    // ✅ Load locations (per user)
+    const locRes = await supabase
+      .from("locations")
+      .select("id,name")
+      .eq("owner_id", userId)
+      .order("name");
+
     if (locRes.error) {
       setError(locRes.error.message);
       setLocations([]);
@@ -69,7 +86,7 @@ function BoxesInner() {
       setLocations((locRes.data ?? []) as LocationRow[]);
     }
 
-    // Load boxes + item qty + location join
+    // ✅ Load boxes (per user) + item qty + location join
     const boxRes = await supabase
       .from("boxes")
       .select(
@@ -82,6 +99,7 @@ function BoxesInner() {
         locations:locations ( name )
       `
       )
+      .eq("owner_id", userId)
       .order("code", { ascending: true });
 
     if (boxRes.error) {
@@ -139,9 +157,20 @@ function BoxesInner() {
     setBusy(true);
     setError(null);
 
+    // ✅ get user for per-user safety (RLS should also enforce)
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+
+    if (authErr || !userId) {
+      setError(authErr?.message || "Not logged in.");
+      setBusy(false);
+      return;
+    }
+
     const itemsRes = await supabase
       .from("items")
       .select("id, photo_url")
+      .eq("owner_id", userId)
       .eq("box_id", boxToDelete.id);
 
     if (itemsRes.error) {
@@ -156,22 +185,32 @@ function BoxesInner() {
     const paths: string[] = [];
     for (const it of items) {
       if (!it.photo_url) continue;
-      const path = getStoragePathFromPublicUrl(it.photo_url);
-      if (path) paths.push(path);
+      const p = getStoragePathFromPublicUrl(it.photo_url);
+      if (p) paths.push(p);
     }
     if (paths.length) {
       await supabase.storage.from("item-photos").remove(paths);
     }
 
-    // Delete items then box
-    const delItemsRes = await supabase.from("items").delete().eq("box_id", boxToDelete.id);
+    // Delete items then box (both per user)
+    const delItemsRes = await supabase
+      .from("items")
+      .delete()
+      .eq("owner_id", userId)
+      .eq("box_id", boxToDelete.id);
+
     if (delItemsRes.error) {
       setError(delItemsRes.error.message);
       setBusy(false);
       return;
     }
 
-    const delBoxRes = await supabase.from("boxes").delete().eq("id", boxToDelete.id);
+    const delBoxRes = await supabase
+      .from("boxes")
+      .delete()
+      .eq("owner_id", userId)
+      .eq("id", boxToDelete.id);
+
     if (delBoxRes.error) {
       setError(delBoxRes.error.message);
       setBusy(false);
@@ -245,6 +284,12 @@ function BoxesInner() {
     setDestLocationId(value);
   }
 
+  function openCreateLocationModal() {
+    setError(null);
+    setNewLocName("");
+    setNewLocOpen(true);
+  }
+
   async function createLocationFromMove() {
     const trimmed = newLocName.trim();
     if (!trimmed) {
@@ -255,7 +300,6 @@ function BoxesInner() {
     setBusy(true);
     setError(null);
 
-    // must be logged in (RLS will also enforce)
     const { data: authData, error: authErr } = await supabase.auth.getUser();
     const userId = authData.user?.id;
 
@@ -287,7 +331,6 @@ function BoxesInner() {
     setDestLocationId(res.data.id);
     setNewLocOpen(false);
     setNewLocName("");
-
     setBusy(false);
   }
 
@@ -319,9 +362,19 @@ function BoxesInner() {
     setBusy(true);
     setError(null);
 
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+
+    if (authErr || !userId) {
+      setError(authErr?.message || "Not logged in.");
+      setBusy(false);
+      return;
+    }
+
     const res = await supabase
       .from("boxes")
       .update({ location_id: info.toLocationId })
+      .eq("owner_id", userId)
       .in("id", info.boxIds);
 
     if (res.error) {
@@ -400,11 +453,7 @@ function BoxesInner() {
               }}
               style={{
                 background: "#fff",
-                border: moveMode
-                  ? isSelected
-                    ? "2px solid #16a34a"
-                    : "2px solid #e5e7eb"
-                  : "1px solid #e5e7eb",
+                border: moveMode ? (isSelected ? "2px solid #16a34a" : "2px solid #e5e7eb") : "1px solid #e5e7eb",
                 borderRadius: 18,
                 padding: 14,
                 boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
@@ -422,9 +471,7 @@ function BoxesInner() {
                 <div style={{ fontWeight: 900, fontSize: 16 }}>{b.code}</div>
 
                 {b.name && <div style={{ fontWeight: 700 }}>{b.name}</div>}
-                <div style={{ opacity: 0.8 }}>
-                  {b.location_name ? b.location_name : "No location"}
-                </div>
+                <div style={{ opacity: 0.8 }}>{b.location_name ? b.location_name : "No location"}</div>
 
                 <div
                   style={{
@@ -554,7 +601,7 @@ function BoxesInner() {
         >
           <div style={{ fontWeight: 900 }}>Selected: {selectedIds.size}</div>
 
-          <div style={{ flex: 1, minWidth: 190 }}>
+          <div style={{ flex: 1, minWidth: 220, display: "flex", gap: 8, alignItems: "center" }}>
             <select
               value={destLocationId}
               onChange={(e) => onDestinationChange(e.target.value)}
@@ -570,6 +617,22 @@ function BoxesInner() {
                 </option>
               ))}
             </select>
+
+            {/* ✅ Dedicated "New" button (people notice this more than a dropdown option) */}
+            <button
+              type="button"
+              onClick={openCreateLocationModal}
+              disabled={busy}
+              style={{
+                whiteSpace: "nowrap",
+                fontWeight: 900,
+                borderRadius: 14,
+                padding: "10px 12px",
+              }}
+              title="Create a new location"
+            >
+              New
+            </button>
           </div>
 
           <button
