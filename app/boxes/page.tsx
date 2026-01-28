@@ -43,6 +43,10 @@ function BoxesInner() {
   const selectedRef = useRef<Set<string>>(new Set());
   const [destLocationId, setDestLocationId] = useState<string>("");
 
+  // Create location modal (for move flow)
+  const [newLocOpen, setNewLocOpen] = useState(false);
+  const [newLocName, setNewLocName] = useState("");
+
   // Confirm move modal
   const [confirmMoveOpen, setConfirmMoveOpen] = useState(false);
   const confirmMoveInfoRef = useRef<{
@@ -105,6 +109,10 @@ function BoxesInner() {
     setConfirmMoveOpen(false);
     confirmMoveInfoRef.current = null;
 
+    // reset create loc modal
+    setNewLocOpen(false);
+    setNewLocName("");
+
     setLoading(false);
   }
 
@@ -131,7 +139,6 @@ function BoxesInner() {
     setBusy(true);
     setError(null);
 
-    // Get items in the box (for photo cleanup)
     const itemsRes = await supabase
       .from("items")
       .select("id, photo_url")
@@ -156,7 +163,7 @@ function BoxesInner() {
       await supabase.storage.from("item-photos").remove(paths);
     }
 
-    // Delete items
+    // Delete items then box
     const delItemsRes = await supabase.from("items").delete().eq("box_id", boxToDelete.id);
     if (delItemsRes.error) {
       setError(delItemsRes.error.message);
@@ -164,7 +171,6 @@ function BoxesInner() {
       return;
     }
 
-    // Delete box
     const delBoxRes = await supabase.from("boxes").delete().eq("id", boxToDelete.id);
     if (delBoxRes.error) {
       setError(delBoxRes.error.message);
@@ -196,6 +202,9 @@ function BoxesInner() {
     selectedRef.current = empty;
     setDestLocationId("");
     setError(null);
+
+    setNewLocOpen(false);
+    setNewLocName("");
   }
 
   function toggleSelected(boxId: string) {
@@ -224,6 +233,63 @@ function BoxesInner() {
     const l = locations.find((x) => x.id === destLocationId);
     return l?.name ?? "Destination";
   }, [destLocationId, locations]);
+
+  function onDestinationChange(value: string) {
+    if (value === "__new_location__") {
+      // open modal instead of selecting this value
+      setDestLocationId("");
+      setNewLocName("");
+      setNewLocOpen(true);
+      return;
+    }
+    setDestLocationId(value);
+  }
+
+  async function createLocationFromMove() {
+    const trimmed = newLocName.trim();
+    if (!trimmed) {
+      setError("Location name is required.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    // must be logged in (RLS will also enforce)
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+
+    if (authErr || !userId) {
+      setError(authErr?.message || "Not logged in.");
+      setBusy(false);
+      return;
+    }
+
+    const res = await supabase
+      .from("locations")
+      .insert({ owner_id: userId, name: trimmed })
+      .select("id,name")
+      .single();
+
+    if (res.error || !res.data) {
+      setError(res.error?.message || "Failed to create location.");
+      setBusy(false);
+      return;
+    }
+
+    // add to local list + select it
+    setLocations((prev) => {
+      const next = [...prev, { id: res.data.id, name: res.data.name }];
+      next.sort((a, b) => a.name.localeCompare(b.name));
+      return next;
+    });
+
+    setDestLocationId(res.data.id);
+    setNewLocOpen(false);
+    setNewLocName("");
+
+    setBusy(false);
+  }
 
   function requestMoveSelected() {
     const ids = Array.from(selectedRef.current);
@@ -404,7 +470,7 @@ function BoxesInner() {
         })}
       </div>
 
-      {/* FAB: Create new box (existing) */}
+      {/* FAB: Create new box */}
       <a
         href="/boxes/new"
         aria-label="Create new box"
@@ -430,7 +496,7 @@ function BoxesInner() {
         </svg>
       </a>
 
-      {/* ✅ NEW: Move Boxes FAB */}
+      {/* Move Boxes FAB */}
       <button
         type="button"
         onClick={() => (moveMode ? exitMoveMode() : enterMoveMode())}
@@ -454,16 +520,7 @@ function BoxesInner() {
         title={moveMode ? "Exit move mode" : "Move boxes"}
         disabled={busy}
       >
-        <svg
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke={moveMode ? "white" : "#111"}
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={moveMode ? "white" : "#111"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="6.5" width="7" height="7" rx="1.5" />
           <rect x="14" y="10.5" width="7" height="7" rx="1.5" />
           <path d="M7 5.5c2.5-2 6.5-2 9 0" />
@@ -497,15 +554,16 @@ function BoxesInner() {
         >
           <div style={{ fontWeight: 900 }}>Selected: {selectedIds.size}</div>
 
-          <div style={{ flex: 1, minWidth: 170 }}>
+          <div style={{ flex: 1, minWidth: 190 }}>
             <select
               value={destLocationId}
-              onChange={(e) => setDestLocationId(e.target.value)}
+              onChange={(e) => onDestinationChange(e.target.value)}
               disabled={busy}
               style={{ width: "100%" }}
             >
               <option value="">Destination location…</option>
               <option value="__none__">No location</option>
+              <option value="__new_location__">➕ Create new location…</option>
               {locations.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
@@ -530,6 +588,51 @@ function BoxesInner() {
           </button>
         </div>
       )}
+
+      {/* Create Location Modal (from move) */}
+      <Modal
+        open={newLocOpen}
+        title="Create new location"
+        onClose={() => {
+          if (busy) return;
+          setNewLocOpen(false);
+          setNewLocName("");
+        }}
+      >
+        <p style={{ marginTop: 0, opacity: 0.85 }}>
+          Type a name, create it, and it’ll be selected as the destination.
+        </p>
+
+        <input
+          placeholder="Location name (e.g. Shed, Loft)"
+          value={newLocName}
+          onChange={(e) => setNewLocName(e.target.value)}
+          autoFocus
+        />
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (busy) return;
+              setNewLocOpen(false);
+              setNewLocName("");
+            }}
+            disabled={busy}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={createLocationFromMove}
+            disabled={busy || !newLocName.trim()}
+            style={{ background: "#111", color: "#fff" }}
+          >
+            {busy ? "Creating..." : "Create location"}
+          </button>
+        </div>
+      </Modal>
 
       {/* Confirm Move Modal */}
       <Modal
