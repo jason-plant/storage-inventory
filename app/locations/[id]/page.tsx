@@ -49,7 +49,9 @@ function LocationInner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Move mode
+  // =========================
+  // MOVE BOXES MODE
+  // =========================
   const [moveMode, setMoveMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const selectedRef = useRef<Set<string>>(new Set());
@@ -68,6 +70,19 @@ function LocationInner() {
     boxIds: string[];
   } | null>(null);
 
+  // =========================
+  // EDIT BOX (RENAME)
+  // =========================
+  const [editBoxOpen, setEditBoxOpen] = useState(false);
+  const editBoxRef = useRef<BoxRow | null>(null);
+  const [editBoxName, setEditBoxName] = useState("");
+
+  // =========================
+  // DELETE BOX
+  // =========================
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const boxToDeleteRef = useRef<BoxRow | null>(null);
+
   async function load() {
     if (!locationId) return;
 
@@ -83,6 +98,7 @@ function LocationInner() {
       return;
     }
 
+    // Location (must belong to user)
     const locRes = await supabase
       .from("locations")
       .select("id, name")
@@ -98,6 +114,7 @@ function LocationInner() {
 
     setLocation(locRes.data as LocationRow);
 
+    // All locations (for destination dropdown)
     const allLocRes = await supabase
       .from("locations")
       .select("id, name")
@@ -111,6 +128,7 @@ function LocationInner() {
       setAllLocations((allLocRes.data ?? []) as LocationMini[]);
     }
 
+    // Boxes in this location (must belong to user)
     const boxRes = await supabase
       .from("boxes")
       .select("id, code, name")
@@ -125,17 +143,25 @@ function LocationInner() {
       setBoxes((boxRes.data ?? []) as BoxRow[]);
     }
 
+    // Reset move state
     setMoveMode(false);
     const empty = new Set<string>();
     setSelectedIds(empty);
     selectedRef.current = empty;
     setDestLocationId("");
 
+    // reset modals
     setConfirmMoveOpen(false);
     confirmMoveInfoRef.current = null;
-
     setNewLocOpen(false);
     setNewLocName("");
+
+    setEditBoxOpen(false);
+    editBoxRef.current = null;
+    setEditBoxName("");
+
+    setConfirmDeleteOpen(false);
+    boxToDeleteRef.current = null;
 
     setLoading(false);
   }
@@ -145,6 +171,9 @@ function LocationInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationId]);
 
+  // =========================
+  // MOVE MODE HELPERS
+  // =========================
   function enterMoveMode() {
     setError(null);
     setMoveMode(true);
@@ -301,6 +330,154 @@ function LocationInner() {
     setBusy(false);
   }
 
+  // =========================
+  // EDIT BOX (RENAME)
+  // =========================
+  function openEditBox(b: BoxRow) {
+    setError(null);
+    editBoxRef.current = b;
+    setEditBoxName(b.name ?? "");
+    setEditBoxOpen(true);
+  }
+
+  async function saveBoxName() {
+    const b = editBoxRef.current;
+    if (!b) return;
+
+    const trimmed = editBoxName.trim();
+    if (!trimmed) {
+      setError("Box name is required.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+
+    if (authErr || !userId) {
+      setError(authErr?.message || "Not logged in.");
+      setBusy(false);
+      return;
+    }
+
+    const res = await supabase
+      .from("boxes")
+      .update({ name: trimmed })
+      .eq("owner_id", userId)
+      .eq("id", b.id)
+      .select("id,name")
+      .single();
+
+    if (res.error || !res.data) {
+      setError(res.error?.message || "Failed to update box.");
+      setBusy(false);
+      return;
+    }
+
+    setBoxes((prev) =>
+      prev.map((x) => (x.id === b.id ? { ...x, name: res.data.name } : x))
+    );
+
+    setEditBoxOpen(false);
+    editBoxRef.current = null;
+    setEditBoxName("");
+    setBusy(false);
+  }
+
+  // =========================
+  // DELETE BOX
+  // =========================
+  function requestDeleteBox(b: BoxRow) {
+    setError(null);
+    boxToDeleteRef.current = b;
+    setConfirmDeleteOpen(true);
+  }
+
+  function getStoragePathFromPublicUrl(url: string) {
+    const marker = "/item-photos/";
+    const idx = url.indexOf(marker);
+    if (idx === -1) return null;
+    return url.substring(idx + marker.length);
+  }
+
+  async function confirmDeleteBox() {
+    const b = boxToDeleteRef.current;
+    if (!b) return;
+
+    setBusy(true);
+    setError(null);
+
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+
+    if (authErr || !userId) {
+      setError(authErr?.message || "Not logged in.");
+      setBusy(false);
+      return;
+    }
+
+    // Fetch items to remove photos
+    const itemsRes = await supabase
+      .from("items")
+      .select("id, photo_url")
+      .eq("owner_id", userId)
+      .eq("box_id", b.id);
+
+    if (itemsRes.error) {
+      setError(itemsRes.error.message);
+      setBusy(false);
+      return;
+    }
+
+    const items = (itemsRes.data ?? []) as { id: string; photo_url: string | null }[];
+
+    // Best-effort: delete storage photos
+    const paths: string[] = [];
+    for (const it of items) {
+      if (!it.photo_url) continue;
+      const p = getStoragePathFromPublicUrl(it.photo_url);
+      if (p) paths.push(p);
+    }
+    if (paths.length) {
+      await supabase.storage.from("item-photos").remove(paths);
+    }
+
+    // Delete items then box
+    const delItemsRes = await supabase
+      .from("items")
+      .delete()
+      .eq("owner_id", userId)
+      .eq("box_id", b.id);
+
+    if (delItemsRes.error) {
+      setError(delItemsRes.error.message);
+      setBusy(false);
+      return;
+    }
+
+    const delBoxRes = await supabase
+      .from("boxes")
+      .delete()
+      .eq("owner_id", userId)
+      .eq("id", b.id);
+
+    if (delBoxRes.error) {
+      setError(delBoxRes.error.message);
+      setBusy(false);
+      return;
+    }
+
+    setBoxes((prev) => prev.filter((x) => x.id !== b.id));
+    setConfirmDeleteOpen(false);
+    boxToDeleteRef.current = null;
+    setBusy(false);
+  }
+
+  // =========================
+  // RENDER STATES
+  // =========================
   if (loading) {
     return (
       <main style={{ padding: 16 }}>
@@ -386,29 +563,82 @@ function LocationInner() {
               }}
               style={{
                 ...cardStyle,
-                display: "block",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
                 textDecoration: "none",
                 color: "#111",
                 border: moveMode ? (isSelected ? "2px solid #16a34a" : "2px solid #e5e7eb") : "1px solid #e5e7eb",
                 cursor: moveMode ? "pointer" : "default",
+                flexWrap: "wrap",
               }}
             >
-              <div style={{ fontWeight: 900, fontSize: 16 }}>{b.code}</div>
-              {b.name && <div style={{ marginTop: 6, opacity: 0.85 }}>{b.name}</div>}
-              {moveMode && isSelected && (
-                <div
-                  style={{
-                    marginTop: 10,
-                    display: "inline-block",
-                    padding: "4px 10px",
-                    borderRadius: 999,
-                    fontWeight: 900,
-                    fontSize: 12,
-                    background: "#dcfce7",
-                    color: "#166534",
-                  }}
-                >
-                  Selected
+              <div style={{ display: "grid", gap: 4 }}>
+                <div style={{ fontWeight: 900, fontSize: 16 }}>{b.code}</div>
+                {b.name && <div style={{ opacity: 0.85 }}>{b.name}</div>}
+                {!b.name && <div style={{ opacity: 0.6 }}>No name</div>}
+                {moveMode && isSelected && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      display: "inline-block",
+                      padding: "4px 10px",
+                      borderRadius: 999,
+                      fontWeight: 900,
+                      fontSize: 12,
+                      background: "#dcfce7",
+                      color: "#166534",
+                      width: "fit-content",
+                    }}
+                  >
+                    Selected
+                  </div>
+                )}
+              </div>
+
+              {/* Edit/Delete only when NOT in move mode */}
+              {!moveMode && (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openEditBox(b);
+                    }}
+                    disabled={busy}
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      color: "#111",
+                      background: "#fff",
+                      fontWeight: 900,
+                      borderRadius: 16,
+                      padding: "10px 14px",
+                    }}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      requestDeleteBox(b);
+                    }}
+                    disabled={busy}
+                    style={{
+                      border: "1px solid rgba(239,68,68,0.45)",
+                      color: "#b91c1c",
+                      background: "#fff",
+                      fontWeight: 900,
+                      borderRadius: 16,
+                      padding: "10px 14px",
+                    }}
+                  >
+                    Delete
+                  </button>
                 </div>
               )}
             </a>
@@ -416,69 +646,7 @@ function LocationInner() {
         })}
       </div>
 
-      {/* FAB: Add box in this location */}
-      <a
-        href={`/locations/${encodeURIComponent(location.id)}/new-box`}
-        aria-label="Add box"
-        style={{
-          position: "fixed",
-          right: 18,
-          bottom: 18,
-          width: 58,
-          height: 58,
-          borderRadius: 999,
-          background: "#111",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          textDecoration: "none",
-          boxShadow: "0 14px 30px rgba(0,0,0,0.25)",
-          zIndex: 2000,
-        }}
-      >
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      </a>
-
-      {/* FAB: Move boxes */}
-      <button
-        type="button"
-        onClick={() => (moveMode ? exitMoveMode() : enterMoveMode())}
-        aria-label="Move boxes"
-        style={{
-          position: "fixed",
-          right: 18,
-          bottom: 86,
-          width: 58,
-          height: 58,
-          borderRadius: 999,
-          background: moveMode ? "#16a34a" : "#ffffff",
-          border: "1px solid #e5e7eb",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 14px 30px rgba(0,0,0,0.20)",
-          zIndex: 2000,
-          cursor: "pointer",
-        }}
-        title={moveMode ? "Exit move mode" : "Move boxes"}
-        disabled={busy}
-      >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={moveMode ? "white" : "#111"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="6.5" width="7" height="7" rx="1.5" />
-          <rect x="14" y="10.5" width="7" height="7" rx="1.5" />
-          <path d="M7 5.5c2.5-2 6.5-2 9 0" />
-          <path d="M16 5.5h-3" />
-          <path d="M17 5.5v3" />
-          <path d="M17 18.5c-2.5 2-6.5 2-9 0" />
-          <path d="M7 18.5h3" />
-          <path d="M7 18.5v-3" />
-        </svg>
-      </button>
-
-      {/* Sticky Move Bar (no New button now) */}
+      {/* Sticky Move Bar */}
       {moveMode && (
         <div
           style={{
@@ -537,7 +705,99 @@ function LocationInner() {
         </div>
       )}
 
-      {/* Create Location Modal */}
+      {/* Move FAB */}
+      <button
+        type="button"
+        onClick={() => (moveMode ? exitMoveMode() : enterMoveMode())}
+        aria-label="Move boxes"
+        style={{
+          position: "fixed",
+          right: 18,
+          bottom: 18,
+          width: 58,
+          height: 58,
+          borderRadius: 999,
+          background: moveMode ? "#16a34a" : "#ffffff",
+          border: "1px solid #e5e7eb",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 14px 30px rgba(0,0,0,0.20)",
+          zIndex: 2000,
+          cursor: "pointer",
+        }}
+        title={moveMode ? "Exit move mode" : "Move boxes"}
+        disabled={busy}
+      >
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={moveMode ? "white" : "#111"}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="3" y="6.5" width="7" height="7" rx="1.5" />
+          <rect x="14" y="10.5" width="7" height="7" rx="1.5" />
+          <path d="M7 5.5c2.5-2 6.5-2 9 0" />
+          <path d="M16 5.5h-3" />
+          <path d="M17 5.5v3" />
+          <path d="M17 18.5c-2.5 2-6.5 2-9 0" />
+          <path d="M7 18.5h3" />
+          <path d="M7 18.5v-3" />
+        </svg>
+      </button>
+
+      {/* Edit Box Modal */}
+      <Modal
+        open={editBoxOpen}
+        title={`Rename box ${editBoxRef.current?.code ?? ""}`}
+        onClose={() => {
+          if (busy) return;
+          setEditBoxOpen(false);
+          editBoxRef.current = null;
+          setEditBoxName("");
+        }}
+      >
+        <p style={{ marginTop: 0, opacity: 0.85 }}>
+          Change the box name. This does not move the box.
+        </p>
+
+        <input
+          value={editBoxName}
+          onChange={(e) => setEditBoxName(e.target.value)}
+          placeholder="Box name"
+          autoFocus
+        />
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (busy) return;
+              setEditBoxOpen(false);
+              editBoxRef.current = null;
+              setEditBoxName("");
+            }}
+            disabled={busy}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={saveBoxName}
+            disabled={busy || !editBoxName.trim()}
+            style={{ background: "#111", color: "#fff" }}
+          >
+            {busy ? "Saving..." : "Save"}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Create Location Modal (from move) */}
       <Modal
         open={newLocOpen}
         title="Create new location"
@@ -628,6 +888,47 @@ function LocationInner() {
             </>
           );
         })()}
+      </Modal>
+
+      {/* Confirm Delete Modal */}
+      <Modal
+        open={confirmDeleteOpen}
+        title="Delete box?"
+        onClose={() => {
+          if (busy) return;
+          setConfirmDeleteOpen(false);
+          boxToDeleteRef.current = null;
+        }}
+      >
+        <p style={{ marginTop: 0 }}>
+          Delete <strong>{boxToDeleteRef.current?.code ?? "this box"}</strong>?
+        </p>
+        <p style={{ marginTop: 0, opacity: 0.85 }}>
+          This will delete all items inside it and remove linked photos.
+        </p>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (busy) return;
+              setConfirmDeleteOpen(false);
+              boxToDeleteRef.current = null;
+            }}
+            disabled={busy}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={confirmDeleteBox}
+            disabled={busy}
+            style={{ background: "#ef4444", color: "#fff" }}
+          >
+            {busy ? "Deleting..." : "Delete"}
+          </button>
+        </div>
       </Modal>
     </main>
   );
