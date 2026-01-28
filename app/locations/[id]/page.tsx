@@ -83,7 +83,6 @@ function LocationInner() {
       return;
     }
 
-    // Location (must belong to user)
     const locRes = await supabase
       .from("locations")
       .select("id, name")
@@ -99,7 +98,6 @@ function LocationInner() {
 
     setLocation(locRes.data as LocationRow);
 
-    // All locations (for destination dropdown)
     const allLocRes = await supabase
       .from("locations")
       .select("id, name")
@@ -113,7 +111,6 @@ function LocationInner() {
       setAllLocations((allLocRes.data ?? []) as LocationMini[]);
     }
 
-    // Boxes in this location (must belong to user)
     const boxRes = await supabase
       .from("boxes")
       .select("id, code, name")
@@ -128,16 +125,15 @@ function LocationInner() {
       setBoxes((boxRes.data ?? []) as BoxRow[]);
     }
 
-    // Reset move state on reload
     setMoveMode(false);
     const empty = new Set<string>();
     setSelectedIds(empty);
     selectedRef.current = empty;
     setDestLocationId("");
 
-    // reset modals
     setConfirmMoveOpen(false);
     confirmMoveInfoRef.current = null;
+
     setNewLocOpen(false);
     setNewLocName("");
 
@@ -148,8 +144,6 @@ function LocationInner() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationId]);
-
-  // ===== Move mode helpers =====
 
   function enterMoveMode() {
     setError(null);
@@ -209,12 +203,6 @@ function LocationInner() {
     setDestLocationId(value);
   }
 
-  function openCreateLocationModal() {
-    setError(null);
-    setNewLocName("");
-    setNewLocOpen(true);
-  }
-
   async function createLocationFromMove() {
     const trimmed = newLocName.trim();
     if (!trimmed) {
@@ -246,7 +234,6 @@ function LocationInner() {
       return;
     }
 
-    // add to local list + select it
     setAllLocations((prev) => {
       const next = [...prev, { id: res.data.id, name: res.data.name }];
       next.sort((a, b) => a.name.localeCompare(b.name));
@@ -313,8 +300,6 @@ function LocationInner() {
     confirmMoveInfoRef.current = null;
     setBusy(false);
   }
-
-  // ===== Render states =====
 
   if (loading) {
     return (
@@ -451,16 +436,7 @@ function LocationInner() {
           zIndex: 2000,
         }}
       >
-        <svg
-          width="26"
-          height="26"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="white"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
@@ -490,16 +466,7 @@ function LocationInner() {
         title={moveMode ? "Exit move mode" : "Move boxes"}
         disabled={busy}
       >
-        <svg
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke={moveMode ? "white" : "#111"}
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={moveMode ? "white" : "#111"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="6.5" width="7" height="7" rx="1.5" />
           <rect x="14" y="10.5" width="7" height="7" rx="1.5" />
           <path d="M7 5.5c2.5-2 6.5-2 9 0" />
@@ -511,7 +478,7 @@ function LocationInner() {
         </svg>
       </button>
 
-      {/* Sticky Move Bar */}
+      {/* Sticky Move Bar (no New button now) */}
       {moveMode && (
         <div
           style={{
@@ -533,7 +500,7 @@ function LocationInner() {
         >
           <div style={{ fontWeight: 900 }}>Selected: {selectedIds.size}</div>
 
-          <div style={{ flex: 1, minWidth: 240, display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ flex: 1, minWidth: 240 }}>
             <select
               value={destLocationId}
               onChange={(e) => onDestinationChange(e.target.value)}
@@ -551,21 +518,6 @@ function LocationInner() {
                   </option>
                 ))}
             </select>
-
-            <button
-              type="button"
-              onClick={openCreateLocationModal}
-              disabled={busy}
-              style={{
-                whiteSpace: "nowrap",
-                fontWeight: 900,
-                borderRadius: 14,
-                padding: "10px 12px",
-              }}
-              title="Create a new location"
-            >
-              New
-            </button>
           </div>
 
           <button
