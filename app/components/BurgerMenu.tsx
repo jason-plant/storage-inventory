@@ -118,7 +118,7 @@ export default function BurgerMenu() {
     // Wait for close animation then navigate (feels smoother)
     setTimeout(() => {
       router.push(href);
-    }, 200);
+    }, 100);
   }
 
   return (
