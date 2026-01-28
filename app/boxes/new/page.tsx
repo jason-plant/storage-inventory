@@ -40,7 +40,7 @@ function NewBoxInner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [code, setCode] = useState("");
+  // ✅ user-visible fields only
   const [name, setName] = useState("");
   const [locationId, setLocationId] = useState<string>("");
 
@@ -49,55 +49,53 @@ function NewBoxInner() {
   const [newLocName, setNewLocName] = useState("");
   const [newLocBusy, setNewLocBusy] = useState(false);
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      setError(null);
+  async function loadData() {
+    setLoading(true);
+    setError(null);
 
-      // Current user (for owner_id)
-      const { data: sessionData, error: sessionErr } =
-        await supabase.auth.getSession();
-      const userId = sessionData.session?.user?.id;
+    const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user?.id;
 
-      if (sessionErr || !userId) {
-        setError(sessionErr?.message || "Not logged in.");
-        setExistingCodes([]);
-        setLocations([]);
-        setLoading(false);
-        return;
-      }
-
-      // Load existing box codes (for auto numbering) - per user
-      const codesRes = await supabase
-        .from("boxes")
-        .select("code")
-        .eq("owner_id", userId)
-        .order("code");
-
-      if (codesRes.error) {
-        setError(codesRes.error.message);
-        setExistingCodes([]);
-      } else {
-        setExistingCodes((codesRes.data ?? []).map((b: BoxMini) => b.code));
-      }
-
-      // Load locations for dropdown - per user
-      const locRes = await supabase
-        .from("locations")
-        .select("id, name")
-        .eq("owner_id", userId)
-        .order("name");
-
-      if (locRes.error) {
-        setError((prev) => prev ?? locRes.error.message);
-        setLocations([]);
-      } else {
-        setLocations((locRes.data ?? []) as LocationRow[]);
-      }
-
+    if (sessionErr || !userId) {
+      setError(sessionErr?.message || "Not logged in.");
+      setExistingCodes([]);
+      setLocations([]);
       setLoading(false);
+      return;
     }
 
+    // existing codes (per user)
+    const codesRes = await supabase
+      .from("boxes")
+      .select("code")
+      .eq("owner_id", userId)
+      .order("code");
+
+    if (codesRes.error) {
+      setError(codesRes.error.message);
+      setExistingCodes([]);
+    } else {
+      setExistingCodes((codesRes.data ?? []).map((b: BoxMini) => b.code));
+    }
+
+    // locations (per user)
+    const locRes = await supabase
+      .from("locations")
+      .select("id, name")
+      .eq("owner_id", userId)
+      .order("name");
+
+    if (locRes.error) {
+      setError((prev) => prev ?? locRes.error.message);
+      setLocations([]);
+    } else {
+      setLocations((locRes.data ?? []) as LocationRow[]);
+    }
+
+    setLoading(false);
+  }
+
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -112,7 +110,6 @@ function NewBoxInner() {
 
   async function handleLocationChange(value: string) {
     if (value === "__new__") {
-      // reset and open modal
       setNewLocName("");
       setNewLocOpen(true);
       return;
@@ -127,8 +124,7 @@ function NewBoxInner() {
     setNewLocBusy(true);
     setError(null);
 
-    const { data: sessionData, error: sessionErr } =
-      await supabase.auth.getSession();
+    const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
     const userId = sessionData.session?.user?.id;
 
     if (sessionErr || !userId) {
@@ -137,13 +133,9 @@ function NewBoxInner() {
       return;
     }
 
-    // Create location (per user)
     const res = await supabase
       .from("locations")
-      .insert({
-        owner_id: userId,
-        name: trimmed,
-      })
+      .insert({ owner_id: userId, name: trimmed })
       .select("id, name")
       .single();
 
@@ -153,12 +145,12 @@ function NewBoxInner() {
       return;
     }
 
-    // Add into list + select it
     setLocations((prev) => {
       const next = [...prev, res.data as LocationRow];
       next.sort((a, b) => a.name.localeCompare(b.name));
       return next;
     });
+
     setLocationId(res.data.id);
 
     setNewLocOpen(false);
@@ -166,42 +158,54 @@ function NewBoxInner() {
     setNewLocBusy(false);
   }
 
-  async function save() {
-    const trimmed = code.trim();
-
-    if (!trimmed) {
-      setError("Box code is required.");
-      return;
-    }
-    if (parseBoxNumber(trimmed) === null) {
-      setError('Box code must look like "BOX-001".');
-      return;
-    }
-
-    setBusy(true);
-    setError(null);
-
-    const { data: sessionData, error: sessionErr } =
-      await supabase.auth.getSession();
+  async function tryInsertWithCode(code: string) {
+    const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
     const userId = sessionData.session?.user?.id;
 
     if (sessionErr || !userId) {
-      setError(sessionErr?.message || "Not logged in.");
-      setBusy(false);
-      return;
+      return { ok: false as const, message: sessionErr?.message || "Not logged in." };
     }
 
     const insertRes = await supabase.from("boxes").insert([
       {
         owner_id: userId,
-        code: trimmed.toUpperCase(),
+        code: code.toUpperCase(),
         name: name.trim() || null,
         location_id: locationId || null,
       },
     ]);
 
     if (insertRes.error) {
-      setError(insertRes.error.message);
+      return { ok: false as const, message: insertRes.error.message };
+    }
+
+    return { ok: true as const };
+  }
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+
+    // First try with current nextAutoCode
+    let result = await tryInsertWithCode(nextAutoCode);
+
+    // If it collided (e.g. someone created same code), reload codes and try once more
+    if (!result.ok) {
+      await loadData();
+      const retryCode = (() => {
+        let max = 0;
+        for (const c of existingCodes) {
+          const n = parseBoxNumber(c);
+          if (n !== null && n > max) max = n;
+        }
+        return `BOX-${pad3(max + 1)}`;
+      })();
+
+      result = await tryInsertWithCode(retryCode);
+    }
+
+    if (!result.ok) {
+      setError(result.message || "Failed to create box.");
       setBusy(false);
       return;
     }
@@ -224,30 +228,13 @@ function NewBoxInner() {
       >
         <h1 style={{ marginTop: 6 }}>Create Box</h1>
         <p style={{ marginTop: 0, opacity: 0.85 }}>
-          Fill in the details and hit Save. You’ll return to the Boxes list.
+          Enter a name (optional) and pick a location (optional). Code is generated automatically.
         </p>
 
         {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
         {loading && <p>Loading…</p>}
 
         <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder='Code e.g. BOX-001'
-              style={{ flex: 1, minWidth: 220 }}
-              disabled={busy}
-            />
-            <button
-              type="button"
-              onClick={() => setCode(nextAutoCode)}
-              disabled={busy || loading}
-            >
-              Auto ({nextAutoCode})
-            </button>
-          </div>
-
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -270,31 +257,22 @@ function NewBoxInner() {
           </select>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={() => router.push("/boxes")}
-              disabled={busy}
-            >
+            <button type="button" onClick={() => router.push("/boxes")} disabled={busy}>
               Cancel
             </button>
 
             <button
               type="button"
               onClick={save}
-              disabled={busy}
+              disabled={busy || loading}
               style={{ background: "#111", color: "#fff" }}
             >
               {busy ? "Saving..." : "Save box"}
             </button>
           </div>
-
-          <p style={{ opacity: 0.7, marginTop: 6 }}>
-            Tip: You can also press Enter while typing in a field.
-          </p>
         </div>
       </div>
 
-      {/* Inline "Create location" modal */}
       <Modal
         open={newLocOpen}
         title="Create new location"
@@ -304,9 +282,7 @@ function NewBoxInner() {
           setNewLocName("");
         }}
       >
-        <p style={{ marginTop: 0, opacity: 0.85 }}>
-          Add a new location without leaving this page.
-        </p>
+        <p style={{ marginTop: 0, opacity: 0.85 }}>Add a new location without leaving this page.</p>
 
         <input
           placeholder="Location name (e.g. Shed, Loft)"
@@ -387,14 +363,7 @@ function Modal({
           padding: 14,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 10,
-            alignItems: "center",
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
           <h3 style={{ margin: 0 }}>{title}</h3>
 
           <button
@@ -415,9 +384,7 @@ function Modal({
           </button>
         </div>
 
-        <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
-          {children}
-        </div>
+        <div style={{ display: "grid", gap: 10, marginTop: 12 }}>{children}</div>
       </div>
     </div>
   );
