@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase } from "../lib/supabaseClient";
 import RequireAuth from "../components/RequireAuth";
 
@@ -15,7 +15,7 @@ type BoxRow = {
   name: string | null;
   location_id: string | null;
   location_name?: string | null;
-  items?: { quantity: number | null }[]; // for qty sum
+  items?: { quantity: number | null }[];
 };
 
 export default function BoxesPage() {
@@ -36,6 +36,11 @@ function BoxesInner() {
   // Delete modal
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const boxToDeleteRef = useRef<BoxRow | null>(null);
+
+  // ✅ Edit box modal (rename only)
+  const [editOpen, setEditOpen] = useState(false);
+  const editBoxRef = useRef<BoxRow | null>(null);
+  const [editName, setEditName] = useState("");
 
   // Move mode
   const [moveMode, setMoveMode] = useState(false);
@@ -60,7 +65,6 @@ function BoxesInner() {
     setLoading(true);
     setError(null);
 
-    // ✅ Get user (so we can filter per-user)
     const { data: authData, error: authErr } = await supabase.auth.getUser();
     const userId = authData.user?.id;
 
@@ -72,7 +76,7 @@ function BoxesInner() {
       return;
     }
 
-    // ✅ Load locations (per user)
+    // Locations (per user)
     const locRes = await supabase
       .from("locations")
       .select("id,name")
@@ -86,7 +90,7 @@ function BoxesInner() {
       setLocations((locRes.data ?? []) as LocationRow[]);
     }
 
-    // ✅ Load boxes (per user) + item qty + location join
+    // Boxes (per user) + item qty + location join
     const boxRes = await supabase
       .from("boxes")
       .select(
@@ -118,7 +122,7 @@ function BoxesInner() {
       setBoxes(mapped);
     }
 
-    // reset move state
+    // Reset move state
     setMoveMode(false);
     const empty = new Set<string>();
     setSelectedIds(empty);
@@ -127,9 +131,14 @@ function BoxesInner() {
     setConfirmMoveOpen(false);
     confirmMoveInfoRef.current = null;
 
-    // reset create loc modal
+    // Reset create loc modal
     setNewLocOpen(false);
     setNewLocName("");
+
+    // Reset edit modal
+    setEditOpen(false);
+    editBoxRef.current = null;
+    setEditName("");
 
     setLoading(false);
   }
@@ -137,6 +146,64 @@ function BoxesInner() {
   useEffect(() => {
     loadAll();
   }, []);
+
+  // ========= EDIT BOX (rename only) =========
+
+  function openEditBox(b: BoxRow) {
+    setError(null);
+    editBoxRef.current = b;
+    setEditName(b.name ?? "");
+    setEditOpen(true);
+  }
+
+  async function saveEditBox() {
+    const b = editBoxRef.current;
+    if (!b) return;
+
+    const trimmed = editName.trim();
+    if (!trimmed) {
+      setError("Box name is required.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+
+    if (authErr || !userId) {
+      setError(authErr?.message || "Not logged in.");
+      setBusy(false);
+      return;
+    }
+
+    const res = await supabase
+      .from("boxes")
+      .update({ name: trimmed })
+      .eq("owner_id", userId)
+      .eq("id", b.id)
+      .select("id,name")
+      .single();
+
+    if (res.error || !res.data) {
+      setError(res.error?.message || "Failed to update box.");
+      setBusy(false);
+      return;
+    }
+
+    // Update list immediately
+    setBoxes((prev) =>
+      prev.map((x) => (x.id === b.id ? { ...x, name: res.data.name } : x))
+    );
+
+    setEditOpen(false);
+    editBoxRef.current = null;
+    setEditName("");
+    setBusy(false);
+  }
+
+  // ========= DELETE BOX =========
 
   function requestDeleteBox(b: BoxRow) {
     boxToDeleteRef.current = b;
@@ -157,7 +224,6 @@ function BoxesInner() {
     setBusy(true);
     setError(null);
 
-    // ✅ get user for per-user safety (RLS should also enforce)
     const { data: authData, error: authErr } = await supabase.auth.getUser();
     const userId = authData.user?.id;
 
@@ -179,7 +245,10 @@ function BoxesInner() {
       return;
     }
 
-    const items = (itemsRes.data ?? []) as { id: string; photo_url: string | null }[];
+    const items = (itemsRes.data ?? []) as {
+      id: string;
+      photo_url: string | null;
+    }[];
 
     // Best-effort photo delete
     const paths: string[] = [];
@@ -192,7 +261,7 @@ function BoxesInner() {
       await supabase.storage.from("item-photos").remove(paths);
     }
 
-    // Delete items then box (both per user)
+    // Delete items then box (per user)
     const delItemsRes = await supabase
       .from("items")
       .delete()
@@ -223,7 +292,7 @@ function BoxesInner() {
     setBusy(false);
   }
 
-  // ===== Move Mode =====
+  // ========= MOVE MODE =========
 
   function enterMoveMode() {
     setMoveMode(true);
@@ -275,19 +344,12 @@ function BoxesInner() {
 
   function onDestinationChange(value: string) {
     if (value === "__new_location__") {
-      // open modal instead of selecting this value
       setDestLocationId("");
       setNewLocName("");
       setNewLocOpen(true);
       return;
     }
     setDestLocationId(value);
-  }
-
-  function openCreateLocationModal() {
-    setError(null);
-    setNewLocName("");
-    setNewLocOpen(true);
   }
 
   async function createLocationFromMove() {
@@ -321,7 +383,6 @@ function BoxesInner() {
       return;
     }
 
-    // add to local list + select it
     setLocations((prev) => {
       const next = [...prev, { id: res.data.id, name: res.data.name }];
       next.sort((a, b) => a.name.localeCompare(b.name));
@@ -383,7 +444,6 @@ function BoxesInner() {
       return;
     }
 
-    // refresh list (so location names update properly)
     await loadAll();
 
     setConfirmMoveOpen(false);
@@ -399,7 +459,6 @@ function BoxesInner() {
       {loading && <p>Loading boxes…</p>}
       {!loading && boxes.length === 0 && <p>No boxes yet.</p>}
 
-      {/* Move Mode helper panel */}
       {moveMode && (
         <div
           style={{
@@ -412,10 +471,19 @@ function BoxesInner() {
             marginTop: 10,
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
             <div>
               <h2 style={{ margin: 0 }}>Move boxes</h2>
-              <div style={{ opacity: 0.85 }}>Tap box cards to select. Use the sticky bar to move.</div>
+              <div style={{ opacity: 0.85 }}>
+                Tap box cards to select. Use the sticky bar to move.
+              </div>
             </div>
 
             <button type="button" onClick={exitMoveMode} disabled={busy}>
@@ -439,7 +507,8 @@ function BoxesInner() {
 
       <div style={{ display: "grid", gap: 10 }}>
         {boxes.map((b) => {
-          const totalQty = b.items?.reduce((sum, it) => sum + (it.quantity ?? 0), 0) ?? 0;
+          const totalQty =
+            b.items?.reduce((sum, it) => sum + (it.quantity ?? 0), 0) ?? 0;
           const isSelected = selectedIds.has(b.id);
 
           return (
@@ -453,7 +522,11 @@ function BoxesInner() {
               }}
               style={{
                 background: "#fff",
-                border: moveMode ? (isSelected ? "2px solid #16a34a" : "2px solid #e5e7eb") : "1px solid #e5e7eb",
+                border: moveMode
+                  ? isSelected
+                    ? "2px solid #16a34a"
+                    : "2px solid #e5e7eb"
+                  : "1px solid #e5e7eb",
                 borderRadius: 18,
                 padding: 14,
                 boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
@@ -471,7 +544,9 @@ function BoxesInner() {
                 <div style={{ fontWeight: 900, fontSize: 16 }}>{b.code}</div>
 
                 {b.name && <div style={{ fontWeight: 700 }}>{b.name}</div>}
-                <div style={{ opacity: 0.8 }}>{b.location_name ? b.location_name : "No location"}</div>
+                <div style={{ opacity: 0.8 }}>
+                  {b.location_name ? b.location_name : "No location"}
+                </div>
 
                 <div
                   style={{
@@ -492,25 +567,49 @@ function BoxesInner() {
               </div>
 
               {!moveMode && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    requestDeleteBox(b);
-                  }}
-                  disabled={busy}
-                  style={{
-                    border: "1px solid rgba(239,68,68,0.45)",
-                    color: "#b91c1c",
-                    background: "#fff",
-                    fontWeight: 900,
-                    borderRadius: 16,
-                    padding: "10px 14px",
-                  }}
-                >
-                  Delete
-                </button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {/* ✅ Edit (rename box) */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openEditBox(b);
+                    }}
+                    disabled={busy}
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      color: "#111",
+                      background: "#fff",
+                      fontWeight: 900,
+                      borderRadius: 16,
+                      padding: "10px 14px",
+                    }}
+                  >
+                    Edit
+                  </button>
+
+                  {/* Delete */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      requestDeleteBox(b);
+                    }}
+                    disabled={busy}
+                    style={{
+                      border: "1px solid rgba(239,68,68,0.45)",
+                      color: "#b91c1c",
+                      background: "#fff",
+                      fontWeight: 900,
+                      borderRadius: 16,
+                      padding: "10px 14px",
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
               )}
             </a>
           );
@@ -601,7 +700,7 @@ function BoxesInner() {
         >
           <div style={{ fontWeight: 900 }}>Selected: {selectedIds.size}</div>
 
-          <div style={{ flex: 1, minWidth: 220, display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ flex: 1, minWidth: 240 }}>
             <select
               value={destLocationId}
               onChange={(e) => onDestinationChange(e.target.value)}
@@ -617,22 +716,6 @@ function BoxesInner() {
                 </option>
               ))}
             </select>
-
-            {/* ✅ Dedicated "New" button (people notice this more than a dropdown option) */}
-            <button
-              type="button"
-              onClick={openCreateLocationModal}
-              disabled={busy}
-              style={{
-                whiteSpace: "nowrap",
-                fontWeight: 900,
-                borderRadius: 14,
-                padding: "10px 12px",
-              }}
-              title="Create a new location"
-            >
-              New
-            </button>
           </div>
 
           <button
@@ -651,6 +734,53 @@ function BoxesInner() {
           </button>
         </div>
       )}
+
+      {/* ✅ Edit box modal */}
+      <Modal
+        open={editOpen}
+        title={`Rename box ${editBoxRef.current?.code ?? ""}`}
+        onClose={() => {
+          if (busy) return;
+          setEditOpen(false);
+          editBoxRef.current = null;
+          setEditName("");
+        }}
+      >
+        <p style={{ marginTop: 0, opacity: 0.85 }}>
+          Change the box name (this does not move the box).
+        </p>
+
+        <input
+          value={editName}
+          onChange={(e) => setEditName(e.target.value)}
+          placeholder="Box name"
+          autoFocus
+        />
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (busy) return;
+              setEditOpen(false);
+              editBoxRef.current = null;
+              setEditName("");
+            }}
+            disabled={busy}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={saveEditBox}
+            disabled={busy || !editName.trim()}
+            style={{ background: "#111", color: "#fff" }}
+          >
+            {busy ? "Saving..." : "Save"}
+          </button>
+        </div>
+      </Modal>
 
       {/* Create Location Modal (from move) */}
       <Modal
@@ -714,7 +844,8 @@ function BoxesInner() {
           return (
             <>
               <p style={{ marginTop: 0 }}>
-                Move <strong>{info.count}</strong> box(es) to <strong>{info.toLocationName}</strong>?
+                Move <strong>{info.count}</strong> box(es) to{" "}
+                <strong>{info.toLocationName}</strong>?
               </p>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -798,7 +929,7 @@ function Modal({
 }: {
   open: boolean;
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
   onClose: () => void;
 }) {
   if (!open) return null;
@@ -832,7 +963,14 @@ function Modal({
           padding: 14,
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 10,
+            alignItems: "center",
+          }}
+        >
           <h3 style={{ margin: 0 }}>{title}</h3>
 
           <button
