@@ -467,6 +467,10 @@ function LocationInner() {
     );
   }
 
+  const addBoxHref = `/boxes/new?locationId=${encodeURIComponent(location.id)}&returnTo=${encodeURIComponent(
+    `/locations/${location.id}`
+  )}`;
+
   return (
     <main style={{ paddingBottom: moveMode ? 180 : 90 }}>
       <h1 style={{ margin: "6px 0 6px" }}>{location.name}</h1>
@@ -685,9 +689,9 @@ function LocationInner() {
         </div>
       )}
 
-      {/* ✅ Add Box FAB (bottom-right) */}
+      {/* ✅ Add Box FAB (passes locationId + returnTo) */}
       <a
-        href={`/locations/${encodeURIComponent(location.id)}/new-box`}
+        href={addBoxHref}
         aria-label="Add box"
         style={{
           position: "fixed",
@@ -711,7 +715,7 @@ function LocationInner() {
         </svg>
       </a>
 
-      {/* ✅ Move Boxes FAB (above add) */}
+      {/* Move Boxes FAB */}
       <button
         type="button"
         onClick={() => (moveMode ? exitMoveMode() : enterMoveMode())}
@@ -760,12 +764,7 @@ function LocationInner() {
       >
         <p style={{ marginTop: 0, opacity: 0.85 }}>Change the box name. This does not move the box.</p>
 
-        <input
-          value={editBoxName}
-          onChange={(e) => setEditBoxName(e.target.value)}
-          placeholder="Box name"
-          autoFocus
-        />
+        <input value={editBoxName} onChange={(e) => setEditBoxName(e.target.value)} placeholder="Box name" autoFocus />
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
@@ -781,12 +780,7 @@ function LocationInner() {
             Cancel
           </button>
 
-          <button
-            type="button"
-            onClick={saveBoxName}
-            disabled={busy || !editBoxName.trim()}
-            style={{ background: "#111", color: "#fff" }}
-          >
+          <button type="button" onClick={saveBoxName} disabled={busy || !editBoxName.trim()} style={{ background: "#111", color: "#fff" }}>
             {busy ? "Saving..." : "Save"}
           </button>
         </div>
@@ -804,12 +798,7 @@ function LocationInner() {
       >
         <p style={{ marginTop: 0, opacity: 0.85 }}>Type a name, create it, and it’ll be selected as the destination.</p>
 
-        <input
-          placeholder="Location name (e.g. Shed, Loft)"
-          value={newLocName}
-          onChange={(e) => setNewLocName(e.target.value)}
-          autoFocus
-        />
+        <input placeholder="Location name (e.g. Shed, Loft)" value={newLocName} onChange={(e) => setNewLocName(e.target.value)} autoFocus />
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
@@ -824,12 +813,7 @@ function LocationInner() {
             Cancel
           </button>
 
-          <button
-            type="button"
-            onClick={createLocationFromMove}
-            disabled={busy || !newLocName.trim()}
-            style={{ background: "#111", color: "#fff" }}
-          >
+          <button type="button" onClick={createLocationFromMove} disabled={busy || !newLocName.trim()} style={{ background: "#111", color: "#fff" }}>
             {busy ? "Creating..." : "Create location"}
           </button>
         </div>
