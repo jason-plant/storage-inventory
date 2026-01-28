@@ -1,12 +1,14 @@
 "use client";
 
 import RequireAuth from "../components/RequireAuth";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 type LocationRow = {
   id: string;
   name: string;
+  // comes from: .select("id,name, boxes(count)")
+  boxes?: { count: number }[];
 };
 
 export default function LocationsPage() {
@@ -45,9 +47,11 @@ function LocationsInner() {
       return;
     }
 
+    // ✅ Fetch locations AND the count of related boxes in one go
+    // This requires a FK relationship: boxes.location_id -> locations.id
     const { data, error } = await supabase
       .from("locations")
-      .select("id,name")
+      .select("id,name, boxes(count)")
       .eq("owner_id", userId)
       .order("name");
 
@@ -148,7 +152,12 @@ function LocationsInner() {
               gap: 12,
             }}
           >
-            <div style={{ fontWeight: 900 }}>{l.name}</div>
+            <div>
+              <div style={{ fontWeight: 900 }}>{l.name}</div>
+              <div style={{ fontSize: 13, opacity: 0.7 }}>
+                {(l.boxes?.[0]?.count ?? 0)} box(es)
+              </div>
+            </div>
 
             <button
               type="button"
@@ -288,7 +297,7 @@ function Modal({
 }: {
   open: boolean;
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
   onClose: () => void;
 }) {
   if (!open) return null;
@@ -313,37 +322,22 @@ function Modal({
     >
       <div
         style={{
-          width: "100%",
-          maxWidth: 520,
+          width: "min(560px, 100%)",
           background: "#fff",
-          borderRadius: 18,
-          border: "1px solid #e5e7eb",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
-          padding: 14,
+          borderRadius: 20,
+          padding: 16,
+          boxShadow: "0 30px 60px rgba(0,0,0,0.35)",
+          border: "1px solid rgba(0,0,0,0.06)",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
           <h3 style={{ margin: 0 }}>{title}</h3>
-
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              borderRadius: 999,
-              width: 40,
-              height: 40,
-              padding: 0,
-              lineHeight: "40px",
-              textAlign: "center",
-              fontWeight: 900,
-            }}
-            aria-label="Close"
-          >
+          <button type="button" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
 
-        <div style={{ display: "grid", gap: 10, marginTop: 12 }}>{children}</div>
+        <div style={{ marginTop: 12 }}>{children}</div>
       </div>
     </div>
   );
