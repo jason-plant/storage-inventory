@@ -55,6 +55,10 @@ function LocationInner() {
   const selectedRef = useRef<Set<string>>(new Set());
   const [destLocationId, setDestLocationId] = useState<string>("");
 
+  // Create location modal (for move flow)
+  const [newLocOpen, setNewLocOpen] = useState(false);
+  const [newLocName, setNewLocName] = useState("");
+
   // Confirm move modal
   const [confirmMoveOpen, setConfirmMoveOpen] = useState(false);
   const confirmMoveInfoRef = useRef<{
@@ -130,8 +134,12 @@ function LocationInner() {
     setSelectedIds(empty);
     selectedRef.current = empty;
     setDestLocationId("");
+
+    // reset modals
     setConfirmMoveOpen(false);
     confirmMoveInfoRef.current = null;
+    setNewLocOpen(false);
+    setNewLocName("");
 
     setLoading(false);
   }
@@ -159,6 +167,9 @@ function LocationInner() {
     setSelectedIds(empty);
     selectedRef.current = empty;
     setDestLocationId("");
+
+    setNewLocOpen(false);
+    setNewLocName("");
   }
 
   function toggleSelected(boxId: string) {
@@ -187,6 +198,66 @@ function LocationInner() {
     const l = allLocations.find((x) => x.id === destLocationId);
     return l?.name ?? "Destination";
   }, [destLocationId, allLocations]);
+
+  function onDestinationChange(value: string) {
+    if (value === "__new_location__") {
+      setDestLocationId("");
+      setNewLocName("");
+      setNewLocOpen(true);
+      return;
+    }
+    setDestLocationId(value);
+  }
+
+  function openCreateLocationModal() {
+    setError(null);
+    setNewLocName("");
+    setNewLocOpen(true);
+  }
+
+  async function createLocationFromMove() {
+    const trimmed = newLocName.trim();
+    if (!trimmed) {
+      setError("Location name is required.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+
+    if (authErr || !userId) {
+      setError(authErr?.message || "Not logged in.");
+      setBusy(false);
+      return;
+    }
+
+    const res = await supabase
+      .from("locations")
+      .insert({ owner_id: userId, name: trimmed })
+      .select("id,name")
+      .single();
+
+    if (res.error || !res.data) {
+      setError(res.error?.message || "Failed to create location.");
+      setBusy(false);
+      return;
+    }
+
+    // add to local list + select it
+    setAllLocations((prev) => {
+      const next = [...prev, { id: res.data.id, name: res.data.name }];
+      next.sort((a, b) => a.name.localeCompare(b.name));
+      return next;
+    });
+
+    setDestLocationId(res.data.id);
+    setNewLocOpen(false);
+    setNewLocName("");
+    setBusy(false);
+  }
 
   function requestMoveSelected() {
     const ids = Array.from(selectedRef.current);
@@ -236,7 +307,6 @@ function LocationInner() {
       return;
     }
 
-    // Reload this page so the moved boxes disappear from the list
     await load();
 
     setConfirmMoveOpen(false);
@@ -324,7 +394,6 @@ function LocationInner() {
             <a
               key={b.id}
               href={moveMode ? "#" : `/box/${encodeURIComponent(b.code)}`}
-              className="tap-btn"
               onClick={(e) => {
                 if (!moveMode) return;
                 e.preventDefault();
@@ -397,7 +466,7 @@ function LocationInner() {
         </svg>
       </a>
 
-      {/* FAB: Move boxes (same position as Boxes screen) */}
+      {/* FAB: Move boxes */}
       <button
         type="button"
         onClick={() => (moveMode ? exitMoveMode() : enterMoveMode())}
@@ -464,15 +533,16 @@ function LocationInner() {
         >
           <div style={{ fontWeight: 900 }}>Selected: {selectedIds.size}</div>
 
-          <div style={{ flex: 1, minWidth: 220 }}>
+          <div style={{ flex: 1, minWidth: 240, display: "flex", gap: 8, alignItems: "center" }}>
             <select
               value={destLocationId}
-              onChange={(e) => setDestLocationId(e.target.value)}
+              onChange={(e) => onDestinationChange(e.target.value)}
               disabled={busy}
               style={{ width: "100%" }}
             >
               <option value="">Destination location…</option>
               <option value="__none__">No location</option>
+              <option value="__new_location__">➕ Create new location…</option>
               {allLocations
                 .filter((l) => l.id !== location.id)
                 .map((l) => (
@@ -481,6 +551,21 @@ function LocationInner() {
                   </option>
                 ))}
             </select>
+
+            <button
+              type="button"
+              onClick={openCreateLocationModal}
+              disabled={busy}
+              style={{
+                whiteSpace: "nowrap",
+                fontWeight: 900,
+                borderRadius: 14,
+                padding: "10px 12px",
+              }}
+              title="Create a new location"
+            >
+              New
+            </button>
           </div>
 
           <button
@@ -500,6 +585,51 @@ function LocationInner() {
         </div>
       )}
 
+      {/* Create Location Modal */}
+      <Modal
+        open={newLocOpen}
+        title="Create new location"
+        onClose={() => {
+          if (busy) return;
+          setNewLocOpen(false);
+          setNewLocName("");
+        }}
+      >
+        <p style={{ marginTop: 0, opacity: 0.85 }}>
+          Type a name, create it, and it’ll be selected as the destination.
+        </p>
+
+        <input
+          placeholder="Location name (e.g. Shed, Loft)"
+          value={newLocName}
+          onChange={(e) => setNewLocName(e.target.value)}
+          autoFocus
+        />
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (busy) return;
+              setNewLocOpen(false);
+              setNewLocName("");
+            }}
+            disabled={busy}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={createLocationFromMove}
+            disabled={busy || !newLocName.trim()}
+            style={{ background: "#111", color: "#fff" }}
+          >
+            {busy ? "Creating..." : "Create location"}
+          </button>
+        </div>
+      </Modal>
+
       {/* Confirm Move Modal */}
       <Modal
         open={confirmMoveOpen}
@@ -517,7 +647,8 @@ function LocationInner() {
           return (
             <>
               <p style={{ marginTop: 0 }}>
-                Move <strong>{info.count}</strong> box(es) to <strong>{info.toLocationName}</strong>?
+                Move <strong>{info.count}</strong> box(es) to{" "}
+                <strong>{info.toLocationName}</strong>?
               </p>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
