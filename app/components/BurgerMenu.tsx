@@ -32,7 +32,7 @@ function MenuRow({
         width: "100%",
         display: "flex",
         alignItems: "center",
-        gap: 14,
+        gap: 5,
         padding: "14px 16px",
         borderRadius: 16,
         border: "1px solid #e5e7eb",
