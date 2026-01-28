@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import React from "react";
 import { AuthProvider } from "./lib/auth";
-import NavBarLinks from "./NavBarLinks";
+import BurgerMenu from "./components/BurgerMenu";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -35,9 +35,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               --radius: 16px;
             }
 
-            /* Form controls feel "app-like" */
             input, select, button, textarea {
-              font-size: 16px; /* prevents iOS zoom on focus */
+              font-size: 16px;
               border-radius: 14px;
               border: 1px solid var(--border);
               padding: 12px 12px;
@@ -57,14 +56,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               box-shadow: none;
             }
 
-            /* Tap targets */
             a, button, input, select {
               -webkit-tap-highlight-color: transparent;
-            }
-
-            @media (max-width: 600px) {
-              .nav-wrap { flex-direction: column; align-items: flex-start; }
-              .nav-links { width: 100%; justify-content: flex-start; }
             }
           `}</style>
 
@@ -80,7 +73,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }}
           >
             <div
-              className="nav-wrap"
               style={{
                 maxWidth: 1100,
                 margin: "0 auto",
@@ -103,9 +95,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Storage Inventory
               </a>
 
-              <div className="nav-links" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <NavBarLinks />
-              </div>
+              {/* ✅ Burger menu is on the RIGHT */}
+              <BurgerMenu />
             </div>
           </nav>
 
