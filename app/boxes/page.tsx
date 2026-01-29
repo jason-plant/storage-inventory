@@ -1,6 +1,5 @@
 "use client";
 
-import DeleteIconButton from "../components/DeleteIconButton";
 import { useEffect, useRef, useState, useMemo, type ReactNode } from "react";
 import { supabase } from "../lib/supabaseClient";
 import RequireAuth from "../components/RequireAuth";
@@ -591,27 +590,25 @@ function BoxesInner() {
                   </button>
 
                   {/* Delete */}
-                  {!moveMode && (
-  <button
-    type="button"
-    onClick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      requestDeleteBox(b);
-    }}
-    disabled={busy}
-    style={{
-      border: "1px solid rgba(239,68,68,0.45)",
-      color: "#b91c1c",
-      background: "#fff",
-      fontWeight: 900,
-      borderRadius: 16,
-      padding: "10px 14px",
-    }}
-  >
-    Delete
-  </button>
-)}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      requestDeleteBox(b);
+                    }}
+                    disabled={busy}
+                    style={{
+                      border: "1px solid rgba(239,68,68,0.45)",
+                      color: "#b91c1c",
+                      background: "#fff",
+                      fontWeight: 900,
+                      borderRadius: 16,
+                      padding: "10px 14px",
+                    }}
+                  >
+                    Delete
+                  </button>
                 </div>
               )}
             </a>
