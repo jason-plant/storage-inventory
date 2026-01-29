@@ -29,10 +29,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <style>{`
             :root{
-              --card:#ffffff;
               --border:#e5e7eb;
               --shadow: 0 1px 10px rgba(0,0,0,0.06);
-              --radius: 16px;
             }
 
             input, select, button, textarea {
@@ -59,56 +57,65 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             a, button, input, select {
               -webkit-tap-highlight-color: transparent;
             }
+
+            /* ✅ Robust blur for ALL browsers (no backdrop-filter dependency) */
+            body.menu-open #app-shell {
+              filter: blur(6px) brightness(0.6);
+              transform: translateZ(0);
+            }
           `}</style>
 
-          {/* NAV BAR */}
-          <nav
-            style={{
-              position: "sticky",
-              top: 0,
-              zIndex: 100,
-              background: "rgba(246,247,251,0.92)",
-              backdropFilter: "blur(10px)",
-              borderBottom: "1px solid #eaeaea",
-            }}
-          >
+          {/* Everything that should blur sits inside this wrapper */}
+          <div id="app-shell">
+            {/* NAV BAR */}
+            <nav
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 100,
+                background: "rgba(246,247,251,0.92)",
+                backdropFilter: "blur(10px)",
+                borderBottom: "1px solid #eaeaea",
+              }}
+            >
+              <div
+                style={{
+                  maxWidth: 1100,
+                  margin: "0 auto",
+                  padding: "12px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <a
+                  href="/locations"
+                  style={{
+                    fontWeight: 900,
+                    textDecoration: "none",
+                    color: "#111",
+                    fontSize: 18,
+                  }}
+                >
+                  Storage Inventory
+                </a>
+
+                {/* Burger button stays top-right */}
+                <BurgerMenu />
+              </div>
+            </nav>
+
+            {/* CONTENT */}
             <div
               style={{
                 maxWidth: 1100,
                 margin: "0 auto",
-                padding: "12px 16px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
+                padding: "14px 14px 28px",
               }}
             >
-              <a
-                href="/locations"
-                style={{
-                  fontWeight: 900,
-                  textDecoration: "none",
-                  color: "#111",
-                  fontSize: 18,
-                }}
-              >
-                Storage Inventory
-              </a>
-
-              {/* ✅ Burger menu is on the RIGHT */}
-              <BurgerMenu />
+              {children}
             </div>
-          </nav>
-
-          {/* CONTENT */}
-          <div
-            style={{
-              maxWidth: 1100,
-              margin: "0 auto",
-              padding: "14px 14px 28px",
-            }}
-          >
-            {children}
           </div>
         </AuthProvider>
       </body>
