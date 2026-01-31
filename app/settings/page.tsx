@@ -8,13 +8,45 @@ import { applyTheme, getStoredPalette, getStoredTheme, PALETTES } from "../lib/t
 export default function SettingsPage() {
   const [theme, setTheme] = useState<"light" | "dark">((typeof window !== "undefined" && getStoredTheme()) || "light");
   const [palette, setPalette] = useState<string>((typeof window !== "undefined" && getStoredPalette()) || "stone");
+  const [customText, setCustomText] = useState<string>("");
+  const [customBg, setCustomBg] = useState<string>("");
+  const [customSurface, setCustomSurface] = useState<string>("");
 
   useEffect(() => {
     // reflect current stored theme on mount
     if (typeof window !== "undefined") {
       applyTheme(theme, palette as any);
     }
+
+    // load custom overrides
+    if (typeof window !== "undefined") {
+      const t = localStorage.getItem("customText") || "";
+      const b = localStorage.getItem("customBg") || "";
+      const s = localStorage.getItem("customSurface") || "";
+      setCustomText(t);
+      setCustomBg(b);
+      setCustomSurface(s);
+      if (t) document.documentElement.style.setProperty("--text", t);
+      if (b) document.documentElement.style.setProperty("--bg", b);
+      if (s) document.documentElement.style.setProperty("--surface", s);
+    }
   }, []);
+
+  function handleCustomChange(type: "text" | "bg" | "surface", value: string) {
+    if (type === "text") {
+      setCustomText(value);
+      document.documentElement.style.setProperty("--text", value);
+      localStorage.setItem("customText", value);
+    } else if (type === "bg") {
+      setCustomBg(value);
+      document.documentElement.style.setProperty("--bg", value);
+      localStorage.setItem("customBg", value);
+    } else if (type === "surface") {
+      setCustomSurface(value);
+      document.documentElement.style.setProperty("--surface", value);
+      localStorage.setItem("customSurface", value);
+    }
+  }
 
   return (
     <RequireAuth>
@@ -58,6 +90,22 @@ export default function SettingsPage() {
                 <div style={{ fontWeight: 800, textTransform: "capitalize" }}>{k}</div>
               </button>
             ))}
+          </div>
+
+          {/* Custom color controls */}
+          <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontWeight: 700 }}>Text color</span>
+              <input type="color" value={customText || ""} onChange={e => handleCustomChange("text", e.target.value)} style={{ width: "100%", height: 36, borderRadius: 8, border: "1px solid var(--border)" }} />
+            </label>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontWeight: 700 }}>Background</span>
+              <input type="color" value={customBg || ""} onChange={e => handleCustomChange("bg", e.target.value)} style={{ width: "100%", height: 36, borderRadius: 8, border: "1px solid var(--border)" }} />
+            </label>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontWeight: 700 }}>Card color</span>
+              <input type="color" value={customSurface || ""} onChange={e => handleCustomChange("surface", e.target.value)} style={{ width: "100%", height: 36, borderRadius: 8, border: "1px solid var(--border)" }} />
+            </label>
           </div>
 
           {/* Live preview */}
