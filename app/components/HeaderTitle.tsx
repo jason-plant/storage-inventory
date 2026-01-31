@@ -108,13 +108,15 @@ export default function HeaderTitle() {
             top: 0,
             right: 0,
             minWidth: 80,
-            textAlign: 'center',
+            maxWidth: 220,
+            textAlign: 'left',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-start',
             justifyContent: 'center',
             lineHeight: 1.1,
             marginLeft: 10,
+            overflow: 'hidden',
           }}
         >
           {(() => {
@@ -129,12 +131,22 @@ export default function HeaderTitle() {
             }
             return (
               <>
-                <div style={{ display: 'flex', flexWrap: 'nowrap', whiteSpace: 'nowrap', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontWeight: 700, fontSize: 17 }}>{name}</span>
-                  <span style={{ fontWeight: 700, fontSize: 17 }}>{inventory}</span>
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'nowrap',
+                  whiteSpace: 'nowrap',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  gap: 4,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: 220,
+                }}>
+                  <span style={{ fontWeight: 700, fontSize: 17, textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 120, display: 'inline-block' }}>{name}</span>
+                  <span style={{ fontWeight: 700, fontSize: 17, textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 90, display: 'inline-block' }}>{inventory}</span>
                 </div>
                 {section && (
-                  <div style={{ fontWeight: 900, fontSize: 20, marginTop: 0 }}>{section}</div>
+                  <div style={{ fontWeight: 900, fontSize: 16, marginTop: 2, textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 220, whiteSpace: 'nowrap' }}>{section}</div>
                 )}
               </>
             );
