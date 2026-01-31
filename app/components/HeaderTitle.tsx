@@ -129,9 +129,10 @@ export default function HeaderTitle() {
             textAlign: 'center',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'center',
             lineHeight: 1.1,
+            marginLeft: 10,
           }}
         >
           {(() => {
