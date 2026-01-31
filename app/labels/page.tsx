@@ -330,14 +330,6 @@ export default function LabelsPage() {
         >
           <h1 className="sr-only" style={{ margin: 0 }}>QR Labels</h1>
 
-          <p style={{ marginTop: 8, marginBottom: 6, opacity: 0.9 }}>
-            Print this page. Each label opens the box page when scanned.
-          </p>
-
-          <p style={{ marginTop: 0, opacity: 0.75 }}>
-            Tip: In print settings, enable “Background graphics” for cleaner QR edges (optional).
-          </p>
-
           <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "stretch", position: "relative" }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
