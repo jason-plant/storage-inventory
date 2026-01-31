@@ -487,16 +487,27 @@ function BoxesInner() {
                 </div>
               </div>
 
-              {/* ✅ Delete icon (prevents card navigation click) */}
+              {/* ✅ Edit + Delete icons (prevent card navigation click) */}
               {!moveMode && (
-                <span
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                >
-                  <DeleteIconButton title="Delete box" disabled={busy} onClick={() => requestDeleteBox(b)} />
-                </span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <span
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <EditIconButton title="Edit box" disabled={busy} onClick={() => openEditBox(b)} />
+                  </span>
+
+                  <span
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <DeleteIconButton title="Delete box" disabled={busy} onClick={() => requestDeleteBox(b)} />
+                  </span>
+                </div>
               )}
             </a>
           );
