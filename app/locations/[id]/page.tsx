@@ -6,6 +6,7 @@ import { supabase } from "../../lib/supabaseClient";
 import RequireAuth from "../../components/RequireAuth";
 import EditIconButton from "../../components/EditIconButton";
 import DeleteIconButton from "../../components/DeleteIconButton";
+import Modal from "../../components/Modal";
 
 type LocationRow = {
   id: string;
@@ -878,72 +879,6 @@ function LocationInner() {
   );
 }
 
-/* ================= MODAL COMPONENT ================= */
+/* Local modals moved to shared Modal component */
 
-function Modal({
-  open,
-  title,
-  children,
-  onClose,
-}: {
-  open: boolean;
-  title: string;
-  children: ReactNode;
-  onClose: () => void;
-}) {
-  if (!open) return null;
 
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.55)",
-        zIndex: 4000,
-        display: "flex",
-        alignItems: "flex-end",
-        justifyContent: "center",
-        padding: 12,
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 520,
-          background: "#fff",
-          borderRadius: 18,
-          border: "1px solid #e5e7eb",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
-          padding: 14,
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-          <h3 style={{ margin: 0 }}>{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              borderRadius: 999,
-              width: 40,
-              height: 40,
-              padding: 0,
-              lineHeight: "40px",
-              textAlign: "center",
-              fontWeight: 900,
-            }}
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div style={{ display: "grid", gap: 10, marginTop: 12 }}>{children}</div>
-      </div>
-    </div>
-  );
-}

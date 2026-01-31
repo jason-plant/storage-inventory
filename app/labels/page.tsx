@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import QRCode from "qrcode";
 import { supabase } from "../lib/supabaseClient";
 import RequireAuth from "../components/RequireAuth";
+import Modal from "../components/Modal";
 
 type BoxRow = {
   id: string;
@@ -71,6 +72,9 @@ export default function LabelsPage() {
   const [copies, setCopies] = useState<string>("1");
   const [printLayout, setPrintLayout] = useState<string>("default");
   const [showHint, setShowHint] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showBluetoothConfirm, setShowBluetoothConfirm] = useState(false);
 
   // show first-run long-press hint (persisted in localStorage)
   useEffect(() => {
@@ -260,7 +264,7 @@ export default function LabelsPage() {
       return alert("Bluetooth printing is not supported in this browser.");
     }
 
-    if (!confirm("Bluetooth printing is experimental. Connect to a BLE label printer that accepts raw image data and proceed?")) return;
+    // confirmation moved to modal UI; caller should open confirmation modal before invoking this function
 
     try {
       // request any device (filtering by name prefix could be added)
@@ -382,10 +386,10 @@ export default function LabelsPage() {
                 </label>
 
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button onClick={() => printSelected()} style={{ padding: "8px 10px", borderRadius: 10, background: "#111", color: "#fff", fontWeight: 900 }}>Print selected</button>
+                  <button onClick={() => setShowPrintModal(true)} style={{ padding: "8px 10px", borderRadius: 10, background: "#111", color: "#fff", fontWeight: 900 }}>Print selected</button>
                   <button onClick={() => exportSelectedPDF()} style={{ padding: "8px 10px", borderRadius: 10, background: "#111", color: "#fff", fontWeight: 900 }}>Export PDF</button>
-                  <button onClick={() => bluetoothPrintSelected()} style={{ padding: "8px 10px", borderRadius: 10, background: "#fff", border: "1px solid #e5e7eb", fontWeight: 800 }}>Bluetooth print</button>
-                  <button onClick={shareSelected} style={{ padding: "8px 10px", borderRadius: 10, background: "#fff", border: "1px solid #e5e7eb", fontWeight: 800 }}>Share</button>
+                  <button onClick={() => setShowPrintModal(true)} style={{ padding: "8px 10px", borderRadius: 10, background: "#fff", border: "1px solid #e5e7eb", fontWeight: 800 }}>Bluetooth print</button>
+                  <button onClick={() => setShowShareModal(true)} style={{ padding: "8px 10px", borderRadius: 10, background: "#fff", border: "1px solid #e5e7eb", fontWeight: 800 }}>Share</button>
                   <button onClick={clearSelection} style={{ padding: "8px 10px", borderRadius: 10, background: "#fff", border: "1px solid #e5e7eb", fontWeight: 800 }}>Clear</button>
                 </div>
               </div>
@@ -471,6 +475,66 @@ export default function LabelsPage() {
             );
           })}
         </div>
+
+        {/* Modals */}
+        {/* Print / Bluetooth modal */}
+        <Modal open={showPrintModal} title="Print labels" onClose={() => setShowPrintModal(false)}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                Copies:
+                <input type="number" value={copies} onChange={(e) => setCopies(e.target.value)} placeholder="1" style={{ width: 80, padding: 6, borderRadius: 8, border: "1px solid #e5e7eb" }} />
+              </label>
+
+              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                Layout:
+                <select value={printLayout} onChange={(e) => setPrintLayout(e.target.value)} style={{ padding: 6, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                  <option value="default">Default</option>
+                  <option value="40x30">40 x 30 (mm)</option>
+                  <option value="50x80">50 x 80 (mm)</option>
+                </select>
+              </label>
+            </div>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => { setShowPrintModal(false); printSelected(); }} className="tap-btn">Print (system)</button>
+              <button onClick={() => { setShowPrintModal(false); exportSelectedPDF(); }} className="tap-btn primary">Export PDF</button>
+              <button onClick={() => { setShowPrintModal(false); setShowBluetoothConfirm(true); }} className="tap-btn">Bluetooth print</button>
+              <button onClick={() => setShowPrintModal(false)} className="tap-btn">Cancel</button>
+            </div>
+
+            <div style={{ fontSize: 13, opacity: 0.85 }}>
+              You can print directly to a connected printer via the system dialog, export a PDF, or use experimental Bluetooth printing. Bluetooth support varies by device.
+            </div>
+          </div>
+        </Modal>
+
+        {/* Share modal */}
+        <Modal open={showShareModal} title="Share labels" onClose={() => setShowShareModal(false)}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontSize: 14 }}>
+              Share {selected.length} label{selected.length !== 1 ? "s" : ""} as images (if supported) or copy a list of codes to clipboard.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={async () => { setShowShareModal(false); await shareSelected(); }} className="tap-btn">Share as images</button>
+              <button onClick={() => { navigator.clipboard.writeText(`Boxes: ${selected.join(", ")}`); setShowShareModal(false); alert("Copied box list to clipboard"); }} className="tap-btn">Copy list</button>
+              <button onClick={() => setShowShareModal(false)} className="tap-btn">Cancel</button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Bluetooth confirm modal */}
+        <Modal open={showBluetoothConfirm} title="Bluetooth printing" onClose={() => setShowBluetoothConfirm(false)}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontSize: 14 }}>
+              Bluetooth printing is experimental. Connect to a BLE label printer that accepts raw image data and proceed?
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={async () => { setShowBluetoothConfirm(false); await bluetoothPrintSelected(); }} className="tap-btn primary">Proceed</button>
+              <button onClick={() => setShowBluetoothConfirm(false)} className="tap-btn">Cancel</button>
+            </div>
+          </div>
+        </Modal>
       </main>
     </RequireAuth>
   );

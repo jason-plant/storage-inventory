@@ -1,6 +1,7 @@
 "use client";
 
 import RequireAuth from "../components/RequireAuth";
+import Modal from "../components/Modal";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase } from "../lib/supabaseClient";
 import EditIconButton from "../components/EditIconButton";
@@ -416,58 +417,8 @@ function LocationsInner() {
   );
 }
 
-/* ================= MODAL COMPONENT ================= */
+/* Local modal replaced by shared `Modal` component in `app/components/Modal.tsx` */
 
-function Modal({
-  open,
-  title,
-  children,
-  onClose,
-}: {
-  open: boolean;
-  title: string;
-  children: ReactNode;
-  onClose: () => void;
-}) {
-  if (!open) return null;
+/* modal removed: using shared Modal component */
+/* Modal removed */
 
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.55)",
-        zIndex: 4000,
-        display: "flex",
-        alignItems: "flex-end",
-        justifyContent: "center",
-        padding: 12,
-      }}
-    >
-      <div
-        style={{
-          width: "min(560px, 100%)",
-          background: "#fff",
-          borderRadius: 20,
-          padding: 16,
-          boxShadow: "0 30px 60px rgba(0,0,0,0.35)",
-          border: "1px solid rgba(0,0,0,0.06)",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-          <h3 style={{ margin: 0 }}>{title}</h3>
-          <button type="button" onClick={onClose} aria-label="Close">
-            ✕
-          </button>
-        </div>
-
-        <div style={{ marginTop: 12, display: "grid", gap: 10 }}>{children}</div>
-      </div>
-    </div>
-  );
-}
