@@ -25,13 +25,7 @@ export default function SettingsPage() {
           <h2 style={{ margin: "0 0 8px 0" }}>Appearance</h2>
 
           <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
-            <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <input type="radio" name="theme" value="light" checked={theme === "light"} onChange={() => { setTheme("light"); applyTheme("light", palette as any); }} /> Light
-            </label>
-            <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <input type="radio" name="theme" value="dark" checked={theme === "dark"} onChange={() => { setTheme("dark"); applyTheme("dark", palette as any); }} /> Dark
-            </label>
-
+            <div style={{ fontWeight: 800 }}>Theme</div>
             <div style={{ marginLeft: "auto" }}>
               <ThemeToggle />
             </div>
