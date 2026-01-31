@@ -638,27 +638,160 @@ export default function BoxPage() {
 
   /* ============= QR ============= */
 
-  async function printSingleQrLabel(boxCode: string, name?: string | null, location?: string | null) {
-    const url = `${window.location.origin}/box/${encodeURIComponent(boxCode)}`;
-    const qr = await QRCode.toDataURL(url, { width: 420, margin: 1 });
+  // Print modal state for single-box printing
+  const [copies, setCopies] = useState<string>("1");
+  const [printLayout, setPrintLayout] = useState<string>("default");
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [showBluetoothConfirm, setShowBluetoothConfirm] = useState(false);
 
-    const w = window.open("", "_blank");
-    if (!w) return;
+  function parseCopies(): number {
+    const n = parseInt(copies || "", 10);
+    if (isNaN(n) || n < 1) return 1;
+    return n;
+  }
 
-    w.document.write(`
-      <html>
-        <body style="font-family:Arial;padding:20px">
-          <div style="width:320px;border:2px solid #000;padding:14px;border-radius:12px">
-            <div style="font-size:22px;font-weight:800">${boxCode}</div>
-            ${name ? `<div style="margin-top:6px">${name}</div>` : ""}
-            ${location ? `<div style="margin-top:6px">Location: ${location}</div>` : ""}
-            <img src="${qr}" style="width:100%;margin-top:10px" />
-            <div style="font-size:10px;margin-top:10px;word-break:break-all">${url}</div>
-          </div>
-          <script>window.onload=()=>window.print()</script>
-        </body>
-      </html>
-    `);
+  // Open the print modal for this box
+  function printSingleQrLabel(_boxCode?: string, _name?: string | null, _location?: string | null) {
+    setShowPrintModal(true);
+  }
+
+  // Print (system) for the current box
+  async function printSingle(count?: number) {
+    if (!box) return;
+    const finalCount = typeof count === "number" ? count : parseCopies();
+    if (finalCount < 1) return alert("Please enter a quantity of at least 1");
+
+    const url = `${window.location.origin}/box/${encodeURIComponent(box.code)}`;
+    const qr = await QRCode.toDataURL(url, { margin: 1, width: 320 });
+
+    const win = window.open("", "_blank") as Window | null;
+    if (!win) {
+      alert("Unable to open print window");
+      return;
+    }
+
+    let labelStyle = "width:320px;";
+    if (printLayout === "40x30") {
+      labelStyle = "width:40mm;height:30mm;";
+    } else if (printLayout === "50x80") {
+      labelStyle = "width:50mm;height:80mm;";
+    }
+
+    const itemsHtml: string[] = [];
+
+    for (let i = 0; i < finalCount; i++) {
+      const b = box as BoxRow;
+      itemsHtml.push(`<div class="label" style="${labelStyle}"><div class="code">${b.code}</div>${b.name ? `<div class="name">${b.name}</div>` : ""}${b.location ? `<div class="loc">${b.location}</div>` : ""}<img src="${qr}" /></div>`);
+    }
+
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Print Label</title><style>body{padding:20px;font-family:Arial} .label{border:1px solid #000;padding:8px;border-radius:8px;display:inline-block;margin:6px;box-sizing:border-box;vertical-align:top;overflow:hidden} .label img{width:100%;height:auto;display:block;margin-top:6px} .label .code{font-weight:900;font-size:16px;text-align:center;width:100%}.no-print{display:none}@media print{body{padding:6mm} .label{page-break-inside:avoid}}</style></head><body>${itemsHtml.join("")}</body></html>`;
+
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    setTimeout(() => win.print(), 400);
+  }
+
+  // Export a single-box PDF
+  async function exportSinglePDF() {
+    if (!box) return;
+    if (typeof window === "undefined") return;
+
+    const { jsPDF } = await import("jspdf");
+    const html2canvas = (await import("html2canvas")).default;
+
+    const finalCount = parseCopies();
+    if (finalCount < 1) return alert("Please enter a quantity of at least 1");
+
+    // determine page size based on layout
+    let pageW = 210; // mm (A4)
+    let pageH = 297;
+    if (printLayout === "40x30") {
+      pageW = 40;
+      pageH = 30;
+    } else if (printLayout === "50x80") {
+      pageW = 50;
+      pageH = 80;
+    }
+
+    const pdf = new jsPDF({ unit: "mm", format: [pageW, pageH] });
+    let first = true;
+
+    for (let i = 0; i < finalCount; i++) {
+      // create offscreen element
+      const el = document.createElement("div");
+      el.style.width = `${pageW}mm`;
+      el.style.height = `${pageH}mm`;
+      el.style.padding = "8px";
+      el.style.boxSizing = "border-box";
+      el.style.border = "1px solid #000";
+      el.innerHTML = `<div style="font-weight:900;font-size:16px;text-align:center;width:100%">${box.code}</div>${box.name ? `<div style=\"text-align:center;font-size:12px;margin-top:6px\">${box.name}</div>` : ""}${box.location ? `<div style=\"text-align:center;font-size:11px;margin-top:4px\">${box.location}</div>` : ""}<img src=\"${await QRCode.toDataURL(`${window.location.origin}/box/${encodeURIComponent(box.code)}`, { width: 320, margin: 1 })}\" style=\"width:100%;margin-top:6px\" />`;
+      el.style.position = "absolute";
+      el.style.left = "-9999px";
+      document.body.appendChild(el);
+
+      // render
+      const canvas = await html2canvas(el, { scale: 2 });
+      const dataUrl = canvas.toDataURL("image/png");
+
+      // add to pdf
+      if (!first) pdf.addPage([pageW, pageH]);
+      first = false;
+      pdf.addImage(dataUrl, "PNG", 0, 0, pageW, pageH);
+
+      document.body.removeChild(el);
+    }
+
+    pdf.save("label.pdf");
+  }
+
+  // Bluetooth print for single box
+  async function bluetoothPrintSingle() {
+    if (!box) return;
+    if (typeof navigator === "undefined" || !(navigator as any).bluetooth) {
+      return alert("Bluetooth printing is not supported in this browser.");
+    }
+
+    try {
+      const device = await (navigator as any).bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [0xFFE0] });
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService(0xFFE0);
+      const char = await service.getCharacteristic(0xFFE1);
+
+      async function sendImageData(dataUrl: string) {
+        const res = await fetch(dataUrl);
+        const blob = await res.arrayBuffer();
+        const chunkSize = 512;
+        for (let i = 0; i < blob.byteLength; i += chunkSize) {
+          const slice = blob.slice(i, i + chunkSize);
+          await char.writeValue(new Uint8Array(slice));
+        }
+      }
+
+      for (let i = 0; i < parseCopies(); i++) {
+        // render offscreen element to canvas then send
+        const el = document.createElement("div");
+        el.style.width = `80mm`;
+        el.style.padding = "6px";
+        el.style.boxSizing = "border-box";
+        el.style.border = "1px solid #000";
+        el.innerHTML = `<div style="font-weight:900;font-size:16px;text-align:center;width:100%">${box.code}</div>${box.name ? `<div style=\"text-align:center;font-size:12px;margin-top:6px\">${box.name}</div>` : ""}${box.location ? `<div style=\"text-align:center;font-size:11px;margin-top:4px\">${box.location}</div>` : ""}<img src=\"${await QRCode.toDataURL(`${window.location.origin}/box/${encodeURIComponent(box.code)}`, { width: 320, margin: 1 })}\" style=\"width:100%;margin-top:6px\" />`;
+        el.style.position = "absolute";
+        el.style.left = "-9999px";
+        document.body.appendChild(el);
+
+        const html2canvas = (await import("html2canvas")).default;
+        const canvas = await html2canvas(el, { scale: 2 });
+        const dataUrl = canvas.toDataURL("image/png");
+        await sendImageData(dataUrl);
+        document.body.removeChild(el);
+      }
+
+      alert("Sent to printer (experimental). Check your printer to confirm output.");
+    } catch (err: any) {
+      console.error(err);
+      alert("Bluetooth print failed: " + (err?.message || err));
+    }
   }
 
   const destinationBoxes = box ? allBoxes.filter((b) => b.id !== box.id) : [];
@@ -1249,6 +1382,51 @@ export default function BoxPage() {
               </button>
             </div>
           </Modal>
+
+          {/* Print / Bluetooth modal for single box */}
+          <Modal open={showPrintModal} title="Print label" onClose={() => setShowPrintModal(false)}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  Copies:
+                  <input type="number" value={copies} onChange={(e) => setCopies(e.target.value)} placeholder="1" style={{ width: 80, padding: 6, borderRadius: 8, border: "1px solid #e5e7eb" }} />
+                </label>
+
+                <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  Layout:
+                  <select value={printLayout} onChange={(e) => setPrintLayout(e.target.value)} style={{ padding: 6, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                    <option value="default">Default</option>
+                    <option value="40x30">40 x 30 (mm)</option>
+                    <option value="50x80">50 x 80 (mm)</option>
+                  </select>
+                </label>
+              </div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => { setShowPrintModal(false); printSingle(); }} className="tap-btn">Print (system)</button>
+                <button onClick={() => { setShowPrintModal(false); exportSinglePDF(); }} className="tap-btn primary">Export PDF</button>
+                <button onClick={() => { setShowPrintModal(false); setShowBluetoothConfirm(true); }} className="tap-btn">Bluetooth print</button>
+                <button onClick={() => setShowPrintModal(false)} className="tap-btn">Cancel</button>
+              </div>
+
+              <div style={{ fontSize: 13, opacity: 0.85 }}>
+                You can print to your printer via the system dialog, export a PDF, or use experimental Bluetooth printing. Bluetooth support varies by device.
+              </div>
+            </div>
+          </Modal>
+
+          <Modal open={showBluetoothConfirm} title="Bluetooth printing" onClose={() => setShowBluetoothConfirm(false)}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ fontSize: 14 }}>
+                Bluetooth printing is experimental. Connect to a BLE label printer that accepts raw image data and proceed?
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={async () => { setShowBluetoothConfirm(false); await bluetoothPrintSingle(); }} className="tap-btn primary">Proceed</button>
+                <button onClick={() => setShowBluetoothConfirm(false)} className="tap-btn">Cancel</button>
+              </div>
+            </div>
+          </Modal>
+
         </main>
       )}
     </RequireAuth>
