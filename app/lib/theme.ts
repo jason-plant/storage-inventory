@@ -1,7 +1,38 @@
 export type PaletteKey = "ivory" | "stone" | "warm" | "anthracite" | "custom";
 
-export const PALETTES: Record<Exclude<PaletteKey, 'custom'>, { bg: string; surface: string; border: string; text: string; muted: string; accent: string; }> = {
-// ...existing code...
+export const PALETTES: Record<Extract<PaletteKey, 'ivory' | 'stone' | 'warm' | 'anthracite'>, { bg: string; surface: string; border: string; text: string; muted: string; accent: string; }> = {
+  ivory: {
+    bg: "#FBFBFA",
+    surface: "#FFFFFF",
+    border: "#EFEDEB",
+    text: "#111827",
+    muted: "#6B7280",
+    accent: "#9AA4A8",
+  },
+  stone: {
+    bg: "#F4F6F7",
+    surface: "#FBFCFD",
+    border: "#DDE2E6",
+    text: "#1F2933",
+    muted: "#6B7280",
+    accent: "#6B8FA3",
+  },
+  warm: {
+    bg: "#F6F4F2",
+    surface: "#FFFFFF",
+    border: "#D6CFC8",
+    text: "#222028",
+    muted: "#6B6661",
+    accent: "#927E6B",
+  },
+  anthracite: {
+    bg: "#ECEFF1",
+    surface: "#FFFFFF",
+    border: "#D6D8DB",
+    text: "#0F1724",
+    muted: "#6B7280",
+    accent: "#33363A",
+  },
 };
 
 export function getStoredTheme(): "light" | "dark" {
@@ -12,23 +43,37 @@ export function getStoredTheme(): "light" | "dark" {
   return "light";
 }
 
+
 export function getStoredPalette(): PaletteKey {
   try {
     const p = localStorage.getItem("palette") as PaletteKey | null;
-    if (p && PALETTES[p]) return p;
+    if (p && (p === 'custom' || PALETTES[p])) return p;
   } catch (e) {}
   return "ivory";
-} 
+}
 
 export function applyTheme(theme: "light" | "dark", palette: PaletteKey) {
   const root = document.documentElement;
-  const p = PALETTES[palette];
-  root.style.setProperty("--bg", p.bg);
-  root.style.setProperty("--surface", p.surface);
-  root.style.setProperty("--border", p.border);
-  root.style.setProperty("--text", p.text);
-  root.style.setProperty("--muted", p.muted);
-  root.style.setProperty("--accent", p.accent);
+  if (palette === 'custom') {
+    // Use custom overrides from localStorage
+    const customBg = localStorage.getItem('customBg') || '#fff';
+    const customSurface = localStorage.getItem('customSurface') || '#fff';
+    const customText = localStorage.getItem('customText') || '#111';
+    root.style.setProperty("--bg", customBg);
+    root.style.setProperty("--surface", customSurface);
+    root.style.setProperty("--border", '#e5e7eb');
+    root.style.setProperty("--text", customText);
+    root.style.setProperty("--muted", '#6B7280');
+    root.style.setProperty("--accent", '#6B8FA3');
+  } else {
+    const p = PALETTES[palette];
+    root.style.setProperty("--bg", p.bg);
+    root.style.setProperty("--surface", p.surface);
+    root.style.setProperty("--border", p.border);
+    root.style.setProperty("--text", p.text);
+    root.style.setProperty("--muted", p.muted);
+    root.style.setProperty("--accent", p.accent);
+  }
 
   if (theme === "dark") {
     root.setAttribute("data-theme", "dark");
