@@ -1,4 +1,4 @@
-export type PaletteKey = "ivory" | "stone" | "warm" | "charcoal";
+export type PaletteKey = "ivory" | "stone" | "warm" | "anthracite";
 
 export const PALETTES: Record<PaletteKey, { bg: string; surface: string; border: string; text: string; muted: string; accent: string; }> = {
   ivory: {
@@ -25,7 +25,7 @@ export const PALETTES: Record<PaletteKey, { bg: string; surface: string; border:
     muted: "#6B6661",
     accent: "#927E6B",
   },
-  charcoal: {
+  anthracite: {
     bg: "#ECEFF1",
     surface: "#FFFFFF",
     border: "#D6D8DB",

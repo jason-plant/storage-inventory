@@ -11,6 +11,8 @@ export default function SettingsPage() {
   const [customText, setCustomText] = useState<string>("");
   const [customBg, setCustomBg] = useState<string>("");
   const [customSurface, setCustomSurface] = useState<string>("");
+  const [customName, setCustomName] = useState("");
+  const [savedThemes, setSavedThemes] = useState<Array<{ name: string; text: string; bg: string; surface: string }>>([]);
 
   useEffect(() => {
     // reflect current stored theme on mount
@@ -29,6 +31,16 @@ export default function SettingsPage() {
       if (t) document.documentElement.style.setProperty("--text", t);
       if (b) document.documentElement.style.setProperty("--bg", b);
       if (s) document.documentElement.style.setProperty("--surface", s);
+    }
+
+    // Load saved themes
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem("savedThemes");
+      if (raw) {
+        try {
+          setSavedThemes(JSON.parse(raw));
+        } catch {}
+      }
     }
   }, []);
 
@@ -59,6 +71,32 @@ export default function SettingsPage() {
     applyTheme(theme, palette as any);
   }
 
+  function saveCustomTheme() {
+    if (!customName.trim()) return;
+    const theme = {
+      name: customName.trim(),
+      text: customText || getComputedStyle(document.documentElement).getPropertyValue("--text"),
+      bg: customBg || getComputedStyle(document.documentElement).getPropertyValue("--bg"),
+      surface: customSurface || getComputedStyle(document.documentElement).getPropertyValue("--surface"),
+    };
+    const next = [...savedThemes.filter((t) => t.name !== theme.name), theme];
+    setSavedThemes(next);
+    localStorage.setItem("savedThemes", JSON.stringify(next));
+    setCustomName("");
+  }
+
+  function applySavedTheme(t: { name: string; text: string; bg: string; surface: string }) {
+    setCustomText(t.text);
+    setCustomBg(t.bg);
+    setCustomSurface(t.surface);
+    document.documentElement.style.setProperty("--text", t.text);
+    document.documentElement.style.setProperty("--bg", t.bg);
+    document.documentElement.style.setProperty("--surface", t.surface);
+    localStorage.setItem("customText", t.text);
+    localStorage.setItem("customBg", t.bg);
+    localStorage.setItem("customSurface", t.surface);
+  }
+
   return (
     <RequireAuth>
       <main style={{ padding: 16 }}>
@@ -74,7 +112,7 @@ export default function SettingsPage() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(0, 1fr))", gap: 10, alignItems: "start", width: "100%", boxSizing: "border-box" }}>
-            {(["ivory", "stone", "warm", "charcoal"] as Array<keyof typeof PALETTES>).map((k) => (
+            {(["ivory", "stone", "warm", "anthracite"] as Array<keyof typeof PALETTES>).map((k) => (
               <button
                 key={k}
                 type="button"
@@ -122,6 +160,39 @@ export default function SettingsPage() {
           <button onClick={resetThemeOverrides} className="tap-btn" style={{ marginTop: 10, width: 180 }}>
             Reset to default
           </button>
+
+          {/* Save custom theme */}
+          <div style={{ marginTop: 16, display: "flex", gap: 8, alignItems: "center" }}>
+            <input
+              type="text"
+              value={customName}
+              onChange={e => setCustomName(e.target.value)}
+              placeholder="Name this theme"
+              style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid var(--border)" }}
+            />
+            <button onClick={saveCustomTheme} className="tap-btn primary" style={{ minWidth: 100 }}>
+              Save custom
+            </button>
+          </div>
+
+          {/* List saved themes */}
+          {savedThemes.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Saved themes:</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {savedThemes.map((t) => (
+                  <button
+                    key={t.name}
+                    onClick={() => applySavedTheme(t)}
+                    className="tap-btn"
+                    style={{ background: t.bg, color: t.text, border: `1.5px solid ${t.surface}`, minWidth: 90 }}
+                  >
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Live preview */}
           <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "flex-start" }}>
