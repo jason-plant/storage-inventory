@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { EditItemButton } from "./EditItemButton";
+import EditIconButton from "../components/EditIconButton";
 import EditItemModal from "./EditItemModal";
 import { DeleteItemButton } from "./DeleteItemButton";
 import { supabase } from "../lib/supabaseClient";
@@ -200,17 +200,13 @@ export default function SearchPage() {
                         {boxCode}
                       </a>
                     )}
-                    <button
-                      type="button"
-                      title="Edit item"
+                    <EditIconButton
                       onClick={() => {
                         setEditItem(i);
                         setEditModalOpen(true);
                       }}
-                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
-                    >
-                      <EditItemButton itemId={i.id} boxCode={boxCode} />
-                    </button>
+                      title="Edit item"
+                    />
                           <EditItemModal
                             open={editModalOpen}
                             item={editItem}
