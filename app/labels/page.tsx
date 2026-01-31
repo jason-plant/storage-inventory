@@ -263,9 +263,15 @@ export default function LabelsPage() {
     if (selected.length === 0) return;
     const finalCount = parseCopies();
     if (finalCount < 1) return alert("Please enter a quantity of at least 1");
-    // 40mm x 30mm at 12px/mm = 480 x 360 px
-    const pxWidth = 480;
-    const pxHeight = 360;
+    // Layouts: 40x30mm (480x360px), 50x80mm (600x960px), default (480x360px)
+    let pxWidth = 480, pxHeight = 360;
+    if (printLayout === "50x80") {
+      pxWidth = 600;
+      pxHeight = 960;
+    } else if (printLayout === "40x30") {
+      pxWidth = 480;
+      pxHeight = 360;
+    }
     for (let i = 0; i < finalCount; i++) {
       for (const code of selected) {
         const b = boxes.find((bb) => bb.code === code)!;
@@ -281,12 +287,22 @@ export default function LabelsPage() {
         ctx.strokeStyle = "#000";
         ctx.lineWidth = 4;
         ctx.strokeRect(0, 0, pxWidth, pxHeight);
-        // Draw code (move down)
-        ctx.font = "bold 64px Arial";
+        // Draw code (move down, size based on label)
+        let codeFont = "bold 64px Arial";
+        let codeY = 36;
+        let qrTop = 120;
+        let qrMargin = 24;
+        if (printLayout === "50x80") {
+          codeFont = "bold 110px Arial";
+          codeY = 60;
+          qrTop = 200;
+          qrMargin = 40;
+        }
+        ctx.font = codeFont;
         ctx.fillStyle = "#000";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillText(code, pxWidth / 2, 36); // top margin
+        ctx.fillText(code, pxWidth / 2, codeY);
         // Draw QR code as large as possible below code
         const qrImg = new window.Image();
         qrImg.src = qrMap[code] || "";
@@ -295,9 +311,7 @@ export default function LabelsPage() {
           qrImg.onerror = resolve;
         });
         // Calculate available space for QR code
-        const qrTop = 120; // space below code
-        const qrMargin = 24; // margin around QR
-        const qrSize = Math.min(pxWidth, pxHeight - qrTop - qrMargin);
+        const qrSize = Math.min(pxWidth - qrMargin * 2, pxHeight - qrTop - qrMargin);
         ctx.drawImage(qrImg, (pxWidth - qrSize) / 2, qrTop, qrSize, qrSize);
         // Download the image
         const dataUrl = canvas.toDataURL("image/png");
