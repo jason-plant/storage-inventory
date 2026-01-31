@@ -116,6 +116,7 @@ export default function BurgerMenu() {
       { label: "Labels", href: "/labels", icon: <IconLabels /> },
       { label: "Scan QR", href: "/scan", icon: <IconScanQR /> },
       { label: "Scan Item", href: "/scan-item", icon: <IconScanItem /> },
+      { label: "Profile", href: "/settings/profile", icon: <span role=\"img\" aria-label=\"Profile\">👤</span> },
     ];
   }, [user]);
 
