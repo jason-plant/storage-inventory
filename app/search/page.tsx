@@ -211,9 +211,49 @@ export default function SearchPage() {
                             open={editModalOpen}
                             item={editItem}
                             onClose={() => setEditModalOpen(false)}
-                            onSave={(updated) => {
-                              setItems((prev) => prev.map((it) => it.id === updated.id ? { ...it, ...updated } : it));
+                            onSave={async (updated) => {
+                              setLoading(true);
+                              setError(null);
+                              let photo_url = updated.photo_url;
+                              const userId = (await supabase.auth.getUser()).data.user?.id;
+                              // Remove old photo if new one is uploaded and there was an old photo
+                              if (updated.photoFile && updated.photo_url) {
+                                const oldUrl = updated.photo_url;
+                                const marker = "/item-photos/";
+                                const idx = oldUrl.indexOf(marker);
+                                if (idx !== -1) {
+                                  const oldPath = oldUrl.substring(idx + marker.length);
+                                  await supabase.storage.from("item-photos").remove([oldPath]);
+                                }
+                              }
+                              // Upload new photo if present
+                              if (updated.photoFile && userId) {
+                                const safeName = updated.photoFile.name.replace(/[^\w.\-]+/g, "_");
+                                const path = `${userId}/${updated.id}/${Date.now()}-${safeName}`;
+                                const uploadRes = await supabase.storage.from("item-photos").upload(path, updated.photoFile, {
+                                  cacheControl: "3600",
+                                  upsert: false,
+                                  contentType: updated.photoFile.type || "image/jpeg",
+                                });
+                                if (!uploadRes.error) {
+                                  const pub = supabase.storage.from("item-photos").getPublicUrl(path);
+                                  photo_url = pub.data.publicUrl;
+                                }
+                              }
+                              // Update item in DB
+                              const { error: updateErr } = await supabase
+                                .from("items")
+                                .update({
+                                  name: updated.name,
+                                  description: updated.description,
+                                  quantity: updated.quantity,
+                                  photo_url,
+                                })
+                                .eq("id", updated.id);
+                              if (updateErr) setError(updateErr.message);
+                              setItems((prev) => prev.map((it) => it.id === updated.id ? { ...it, ...updated, photo_url } : it));
                               setEditModalOpen(false);
+                              setLoading(false);
                             }}
                           />
                     <DeleteItemButton itemId={i.id} onDeleted={handleDeleted} />
