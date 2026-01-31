@@ -75,7 +75,8 @@ export default function BurgerMenu() {
         lastX = startX;
         mode = 'opening';
         setSwipeMode('opening');
-        setSwipeX(0);
+        // Start menu off-screen (swipeX = menuWidth)
+        setSwipeX(menuWidth);
       }
       // Close: swipe right from left edge of open menu
       else if (open && panelRef.current) {
@@ -96,8 +97,9 @@ export default function BurgerMenu() {
       lastX = e.touches[0].clientX;
       let dx = lastX - startX;
       if (mode === 'opening') {
-        dx = Math.max(Math.min(dx, 0), -menuWidth); // clamp between -menuWidth and 0
-        setSwipeX(dx);
+        // Move menu from off-screen (menuWidth) to 0
+        let menuDx = Math.max(0, Math.min(menuWidth, menuWidth + dx));
+        setSwipeX(menuDx);
       } else if (mode === 'closing') {
         dx = Math.max(Math.min(dx, menuWidth), 0); // clamp between 0 and menuWidth
         setSwipeX(dx);
@@ -111,7 +113,8 @@ export default function BurgerMenu() {
       }
       let dx = lastX - startX;
       if (mode === 'opening') {
-        if (dx < -menuWidth / 3) {
+        // If menu dragged more than 1/3 open, open it
+        if ((menuWidth - (swipeX ?? menuWidth)) > menuWidth / 3) {
           setOpen(true);
         }
         setSwipeX(null);
@@ -255,7 +258,7 @@ export default function BurgerMenu() {
           // Interactive slide animation
           transform:
             swipeMode === 'opening' && swipeX !== null
-              ? `translateX(${340 + swipeX}px)`
+              ? `translateX(${swipeX}px)`
               : swipeMode === 'closing' && swipeX !== null
                 ? `translateX(${swipeX}px)`
                 : open
