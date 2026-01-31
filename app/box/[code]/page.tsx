@@ -684,7 +684,7 @@ export default function BoxPage() {
       itemsHtml.push(`<div class="label" style="${labelStyle}"><div class="code">${b.code}</div>${b.name ? `<div class="name">${b.name}</div>` : ""}${b.location ? `<div class="loc">${b.location}</div>` : ""}<img src="${qr}" /><div style="font-size:10px;margin-top:10px;word-break:break-all">${url}</div></div>`);
     }
 
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Print Label - ${box.code}</title><style>body{padding:20px;font-family:Arial} .label{border:1px solid #000;padding:8px;border-radius:8px;display:inline-block;margin:6px;box-sizing:border-box;vertical-align:top;overflow:hidden} .label img{width:100%;height:auto;display:block;margin-top:6px} .label .code{font-weight:900;font-size:16px;text-align:center;width:100%}.no-print{display:none}@media print{body{padding:6mm} .label{page-break-inside:avoid}}</style></head><body>${itemsHtml.join("")}</body></html>`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Print Label - ${box.code}</title><style>body{padding:20px;font-family:Arial} .label{border:1px solid #000;padding:8px;border-radius:8px;display:inline-block;margin:6px;box-sizing:border-box;vertical-align:top;overflow:hidden} .label img{width:70%;height:auto;display:block;margin:6px auto} .label .code{font-weight:900;font-size:26px;text-align:center;width:100%}.no-print{display:none}@media print{body{padding:6mm} .label{page-break-inside:avoid}}</style></head><body>${itemsHtml.join("")}</body></html>`; 
 
 
     win.document.open();
@@ -726,7 +726,7 @@ export default function BoxPage() {
       el.style.padding = "8px";
       el.style.boxSizing = "border-box";
       el.style.border = "1px solid #000";
-      el.innerHTML = `<div style="font-weight:900;font-size:16px;text-align:center;width:100%">${box.code}</div>${box.name ? `<div style=\"text-align:center;font-size:12px;margin-top:6px\">${box.name}</div>` : ""}${box.location ? `<div style=\"text-align:center;font-size:11px;margin-top:4px\">${box.location}</div>` : ""}<img src=\"${await QRCode.toDataURL(`${window.location.origin}/box/${encodeURIComponent(box.code)}`, { width: 320, margin: 1 })}\" style=\"width:100%;margin-top:6px\" />`;
+      el.innerHTML = `<div style="font-weight:900;font-size:26px;text-align:center;width:100%">${box.code}</div>${box.name ? `<div style=\"text-align:center;font-size:12px;margin-top:6px\">${box.name}</div>` : ""}${box.location ? `<div style=\"text-align:center;font-size:11px;margin-top:4px\">${box.location}</div>` : ""}<img src=\"${await QRCode.toDataURL(`${window.location.origin}/box/${encodeURIComponent(box.code)}`, { width: 320, margin: 1 })}\" style=\"width:70%;display:block;margin:6px auto\" />`;
       el.style.position = "absolute";
       el.style.left = "-9999px";
       document.body.appendChild(el);
@@ -776,7 +776,7 @@ export default function BoxPage() {
         el.style.padding = "6px";
         el.style.boxSizing = "border-box";
         el.style.border = "1px solid #000";
-        el.innerHTML = `<div style="font-weight:900;font-size:16px;text-align:center;width:100%">${box.code}</div>${box.name ? `<div style=\"text-align:center;font-size:12px;margin-top:6px\">${box.name}</div>` : ""}${box.location ? `<div style=\"text-align:center;font-size:11px;margin-top:4px\">${box.location}</div>` : ""}<img src=\"${await QRCode.toDataURL(`${window.location.origin}/box/${encodeURIComponent(box.code)}`, { width: 320, margin: 1 })}\" style=\"width:100%;margin-top:6px\" />`;
+        el.innerHTML = `<div style="font-weight:900;font-size:26px;text-align:center;width:100%">${box.code}</div>${box.name ? `<div style=\"text-align:center;font-size:12px;margin-top:6px\">${box.name}</div>` : ""}${box.location ? `<div style=\"text-align:center;font-size:11px;margin-top:4px\">${box.location}</div>` : ""}<img src=\"${await QRCode.toDataURL(`${window.location.origin}/box/${encodeURIComponent(box.code)}`, { width: 320, margin: 1 })}\" style=\"width:70%;display:block;margin:6px auto\" />`;
         el.style.position = "absolute";
         el.style.left = "-9999px";
         document.body.appendChild(el);
