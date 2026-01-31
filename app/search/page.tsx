@@ -150,52 +150,41 @@ export default function SearchPage() {
                 )}
 
                 <div style={{ flex: 1 }}>
+                  {/* Location */}
+                  {locationName && (
+                    <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 2, opacity: 0.85 }}>
+                      {locationName}
+                    </div>
+                  )}
+                  {/* Item name */}
                   <div style={{ fontWeight: 900, fontSize: 16 }}>
                     {i.name}
                     {typeof i.quantity === "number" ? ` (x${i.quantity})` : ""}
                   </div>
-
+                  {/* Description */}
                   {i.description && <div style={{ marginTop: 6, opacity: 0.9 }}>{i.description}</div>}
-
-                  {(boxCode || boxName || locationName) && (
+                  {/* Box number */}
+                  {boxCode && (
                     <div style={{ marginTop: 10, opacity: 0.9 }}>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-                        <span style={{ fontWeight: 800 }}>Box:</span>
-
-                        {boxCode ? (
-                          <a
-                            href={`/box/${encodeURIComponent(boxCode)}`}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              padding: "8px 10px",
-                              borderRadius: 14,
-                              border: "1px solid #ddd",
-                              background: "#fff",
-                              fontWeight: 900,
-                              textDecoration: "none",
-                              color: "#111",
-                            }}
-                          >
-                            {boxCode}
-                          </a>
-                        ) : (
-                          <span style={{ opacity: 0.7 }}>Unknown</span>
-                        )}
-
-                        {boxName ? (
-                          <span style={{ opacity: 0.95 }}>
-                            — <strong>{boxName}</strong>
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {locationName ? (
-                        <div style={{ marginTop: 6, opacity: 0.85 }}>
-                          Location: <strong>{locationName}</strong>
-                        </div>
-                      ) : null}
+                      <span style={{ fontWeight: 800 }}>Box:</span>{" "}
+                      <a
+                        href={`/box/${encodeURIComponent(boxCode)}`}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: "8px 10px",
+                          borderRadius: 14,
+                          border: "1px solid #ddd",
+                          background: "#fff",
+                          fontWeight: 900,
+                          textDecoration: "none",
+                          color: "#111",
+                          marginLeft: 6,
+                        }}
+                      >
+                        {boxCode}
+                      </a>
                     </div>
                   )}
                 </div>
