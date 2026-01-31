@@ -118,22 +118,19 @@ export default function HeaderTitle() {
           </div>
         )}
 
-        <div className={`ht-layer ${animating ? "entering" : ""}`} style={{ position: "absolute", left: 0, top: 0, right: 0 }}>
-          {meta.title.split('\n').map((line, i) => (
-            <span
-              key={i}
-              style={{
-                fontWeight: 900,
-                fontSize: i === 0 ? 18 : 15,
-                display: "block",
-                lineHeight: 1.3,
-                marginTop: i === 0 ? 0 : 2,
-                color: i === 0 ? undefined : 'var(--muted)'
-              }}
-            >
-              {line}
-            </span>
-          ))}
+        <div className={`ht-layer ${animating ? "entering" : ""}`} style={{ position: "absolute", left: 0, top: 0, right: 0, whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'left' }}>
+          {(() => {
+            const [main, section] = meta.title.split('\n');
+            return (
+              <span style={{ fontWeight: 700, fontSize: 17, display: 'inline', marginRight: 6 }}>{main}</span>
+            );
+          })()}
+          {(() => {
+            const [_, section] = meta.title.split('\n');
+            return section ? (
+              <span style={{ fontWeight: 900, fontSize: 20, display: 'inline', marginLeft: 6 }}>{section}</span>
+            ) : null;
+          })()}
         </div>
       </div>
     </Link>
