@@ -13,6 +13,7 @@ export default function ProfileSettingsPage() {
   const [status, setStatus] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
+
   useEffect(() => {
     async function loadUser() {
       setLoading(true);
@@ -27,6 +28,19 @@ export default function ProfileSettingsPage() {
     }
     loadUser();
   }, []);
+
+  async function handleNameSave(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("");
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ data: { name } });
+    if (error) {
+      setStatus("Failed to update name: " + error.message);
+    } else {
+      setStatus("Name updated!");
+    }
+    setLoading(false);
+  }
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files?.[0]) return;
