@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import RequireAuth from "../components/RequireAuth";
 import DeleteIconButton from "../components/DeleteIconButton";
+import EditIconButton from "../components/EditIconButton";
 
 type LocationRow = {
   id: string;
@@ -37,6 +38,11 @@ function BoxesInner() {
   // Delete modal
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const boxToDeleteRef = useRef<BoxRow | null>(null);
+
+  // Edit box modal
+  const [editOpen, setEditOpen] = useState(false);
+  const editBoxRef = useRef<BoxRow | null>(null);
+  const [editName, setEditName] = useState("");
 
   // Move mode
   const [moveMode, setMoveMode] = useState(false);
@@ -179,6 +185,58 @@ function BoxesInner() {
     setBoxes((prev) => prev.filter((x) => x.id !== boxToDelete.id));
     setConfirmDeleteOpen(false);
     boxToDeleteRef.current = null;
+    setBusy(false);
+  }
+
+  // ===== Edit Box =====
+  function openEditBox(b: BoxRow) {
+    setError(null);
+    editBoxRef.current = b;
+    setEditName(b.name ?? "");
+    setEditOpen(true);
+  }
+
+  async function saveEdit() {
+    const b = editBoxRef.current;
+    if (!b) return;
+
+    const trimmed = editName.trim();
+    if (!trimmed) {
+      setError("Box name is required.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+
+    if (authErr || !userId) {
+      setError(authErr?.message || "Not logged in.");
+      setBusy(false);
+      return;
+    }
+
+    const res = await supabase
+      .from("boxes")
+      .update({ name: trimmed })
+      .eq("owner_id", userId)
+      .eq("id", b.id)
+      .select("id,name")
+      .single();
+
+    if (res.error || !res.data) {
+      setError(res.error?.message || "Failed to update box.");
+      setBusy(false);
+      return;
+    }
+
+    setBoxes((prev) => prev.map((x) => (x.id === b.id ? { ...x, name: res.data.name } : x)));
+
+    setEditOpen(false);
+    editBoxRef.current = null;
+    setEditName("");
     setBusy(false);
   }
 
@@ -632,6 +690,41 @@ function BoxesInner() {
             </>
           );
         })()}
+      </Modal>
+
+      {/* Edit box modal */}
+      <Modal
+        open={editOpen}
+        title={`Rename box ${editBoxRef.current?.code ?? ""}`}
+        onClose={() => {
+          if (busy) return;
+          setEditOpen(false);
+          editBoxRef.current = null;
+          setEditName("");
+        }}
+      >
+        <p style={{ marginTop: 0, opacity: 0.85 }}>Change the box name. This does not move the box.</p>
+
+        <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Box name" autoFocus />
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (busy) return;
+              setEditOpen(false);
+              editBoxRef.current = null;
+              setEditName("");
+            }}
+            disabled={busy}
+          >
+            Cancel
+          </button>
+
+          <button type="button" onClick={saveEdit} disabled={busy || !editName.trim()} style={{ background: "#111", color: "#fff" }}>
+            {busy ? "Saving..." : "Save"}
+          </button>
+        </div>
       </Modal>
 
       {/* Delete box modal */}
