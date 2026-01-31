@@ -55,78 +55,73 @@ export default function BurgerMenu() {
 
   const [open, setOpen] = useState(false);
 
-  // Interactive swipe state
-  const [swipeX, setSwipeX] = useState<number | null>(null);
-  const [swipeMode, setSwipeMode] = useState<'opening' | 'closing' | null>(null);
+  // Touch gesture state
+  const touchStartX = useRef<number | null>(null);
+  const touchCurrentX = useRef<number | null>(null);
+  const touchActive = useRef<boolean>(false);
 
-  // Interactive swipe to open/close
+  // Swipe to open (from right edge)
   useEffect(() => {
-    let dragging = false;
-    let startX: number | null = null;
-    let lastX: number | null = null;
-    let mode: 'opening' | 'closing' | null = null;
-    const menuWidth = 340; // px, must match drawer width
     function onTouchStart(e: TouchEvent) {
+      if (open) return;
       const vw = window.innerWidth;
-      // Open: swipe left from right edge
-      if (!open && e.touches[0].clientX > vw - 24) {
-        dragging = true;
-        startX = e.touches[0].clientX;
-        lastX = startX;
-        mode = 'opening';
-        setSwipeMode('opening');
-        setSwipeX(0);
+      if (e.touches[0].clientX > vw - 24) {
+        touchStartX.current = e.touches[0].clientX;
+        touchCurrentX.current = e.touches[0].clientX;
+        touchActive.current = true;
       }
-      // Close: swipe right from left edge of open menu
-      else if (open && panelRef.current) {
-        const panel = panelRef.current;
-        const rect = panel.getBoundingClientRect();
-        if (e.touches[0].clientX < rect.left + 80) {
-          dragging = true;
+    }
+    function onTouchMove(e: TouchEvent) {
+      if (!touchActive.current) return;
+      touchCurrentX.current = e.touches[0].clientX;
+    }
+    function onTouchEnd() {
+      if (!touchActive.current) return;
+      const dx = (touchCurrentX.current ?? 0) - (touchStartX.current ?? 0);
+      if (dx < -60) setOpen(true);
+      touchActive.current = false;
+      touchStartX.current = null;
+      touchCurrentX.current = null;
+    }
+    window.addEventListener('touchstart', onTouchStart);
+    window.addEventListener('touchmove', onTouchMove);
+    window.addEventListener('touchend', onTouchEnd);
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [open]);
+
+  // Swipe to close (on menu)
+  useEffect(() => {
+    if (!open) return;
+    let startX: number | null = null;
+    let currentX: number | null = null;
+    let active = false;
+    function onTouchStart(e: TouchEvent) {
+      if (!open) return;
+      // Only start if touch is on the left 80px of the menu
+      const panel = panelRef.current;
+      if (panel && e.touches[0].target instanceof Node && panel.contains(e.touches[0].target)) {
+        if (e.touches[0].clientX < (panel.getBoundingClientRect().left + 80)) {
           startX = e.touches[0].clientX;
-          lastX = startX;
-          mode = 'closing';
-          setSwipeMode('closing');
-          setSwipeX(0);
+          currentX = e.touches[0].clientX;
+          active = true;
         }
       }
     }
     function onTouchMove(e: TouchEvent) {
-      if (!dragging || startX === null) return;
-      lastX = e.touches[0].clientX;
-      let dx = lastX - startX;
-      if (mode === 'opening') {
-        dx = Math.max(Math.min(dx, 0), -menuWidth); // clamp between -menuWidth and 0
-        setSwipeX(dx);
-      } else if (mode === 'closing') {
-        dx = Math.max(Math.min(dx, menuWidth), 0); // clamp between 0 and menuWidth
-        setSwipeX(dx);
-      }
+      if (!active) return;
+      currentX = e.touches[0].clientX;
     }
     function onTouchEnd() {
-      if (!dragging || startX === null || lastX === null) {
-        setSwipeX(null);
-        setSwipeMode(null);
-        return;
-      }
-      let dx = lastX - startX;
-      if (mode === 'opening') {
-        if (dx < -menuWidth / 3) {
-          setOpen(true);
-        }
-        setSwipeX(null);
-        setSwipeMode(null);
-      } else if (mode === 'closing') {
-        if (dx > menuWidth / 3) {
-          setOpen(false);
-        }
-        setSwipeX(null);
-        setSwipeMode(null);
-      }
-      dragging = false;
+      if (!active) return;
+      const dx = (currentX ?? 0) - (startX ?? 0);
+      if (dx > 50) setOpen(false);
+      active = false;
       startX = null;
-      lastX = null;
-      mode = null;
+      currentX = null;
     }
     window.addEventListener('touchstart', onTouchStart);
     window.addEventListener('touchmove', onTouchMove);
@@ -217,7 +212,6 @@ export default function BurgerMenu() {
         position: "fixed",
         inset: 0,
         zIndex: 9999,
-        touchAction: 'none',
       }}
     >
       {/* Backdrop (dim only; blur is handled by #app-shell filter) */}
@@ -225,10 +219,8 @@ export default function BurgerMenu() {
         style={{
           position: "absolute",
           inset: 0,
-          background: (open || swipeMode === 'opening' || swipeMode === 'closing')
-            ? `rgba(0,0,0,${Math.max(0.0, Math.min(0.82, (open ? 1 : 0) + ((swipeX ?? 0) / -340)))})`
-            : "rgba(0,0,0,0)",
-          transition: swipeMode ? undefined : "background 220ms ease",
+          background: open ? "rgba(0,0,0,0.82)" : "rgba(0,0,0,0)",
+          transition: "background 220ms ease",
         }}
       />
 
@@ -252,23 +244,10 @@ export default function BurgerMenu() {
           gap: 14,
           zIndex: 1,
 
-          // Interactive slide animation
-          transform:
-            swipeMode === 'opening' && swipeX !== null
-              ? `translateX(${340 + swipeX}px)`
-              : swipeMode === 'closing' && swipeX !== null
-                ? `translateX(${swipeX}px)`
-                : open
-                  ? 'translateX(0)'
-                  : 'translateX(16px)',
-          opacity:
-            swipeMode
-              ? 1
-              : open
-                ? 1
-                : 0,
-          transition: swipeMode ? undefined : "transform 220ms cubic-bezier(.2,.9,.2,1), opacity 220ms ease",
-          touchAction: 'none',
+          // ✅ slide animation
+          transform: open ? "translateX(0)" : "translateX(16px)",
+          opacity: open ? 1 : 0,
+          transition: "transform 220ms cubic-bezier(.2,.9,.2,1), opacity 220ms ease",
         }}
       >
         {/* Header */}
