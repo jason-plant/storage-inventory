@@ -68,7 +68,31 @@ export default function LabelsPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const longPressTimers = useRef<Record<string, number>>({});
   const longPressFired = useRef<Record<string, boolean>>({});
-  const [copies, setCopies] = useState<number>(1);
+  const [copies, setCopies] = useState<string>("1");
+  const [printLayout, setPrintLayout] = useState<string>("default");
+  const [showHint, setShowHint] = useState(false);
+
+  // show first-run long-press hint (persisted in localStorage)
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      const seen = localStorage.getItem("labels_longpress_hint_seen");
+      if (!seen) {
+        setShowHint(true);
+        const t = window.setTimeout(() => setShowHint(false), 5500);
+        return () => clearTimeout(t);
+      }
+    } catch (e) {
+      /* ignore */
+    }
+  }, []);
+
+  function dismissHint() {
+    try {
+      localStorage.setItem("labels_longpress_hint_seen", "1");
+    } catch (e) {}
+    setShowHint(false);
+  }
 
   function toggleSelect(code: string) {
     setSelected((prev) => (prev.includes(code) ? prev.filter((p) => p !== code) : [...prev, code]));
@@ -96,7 +120,13 @@ export default function LabelsPage() {
     }, 0);
   }
 
-  async function printSelected(count: number) {
+  function parseCopies(): number {
+    const n = parseInt(copies || "", 10);
+    if (isNaN(n) || n < 1) return 1;
+    return n;
+  }
+
+  async function printSelected(count?: number) {
     if (selected.length === 0) return;
     const win = window.open("", "_blank") as Window | null;
     if (!win) {
@@ -106,15 +136,29 @@ export default function LabelsPage() {
 
     const itemsHtml: string[] = [];
 
-    for (let i = 0; i < count; i++) {
+    const finalCount = typeof count === "number" ? count : parseCopies();
+    if (finalCount < 1) {
+      alert("Please enter a quantity of at least 1");
+      return;
+    }
+
+    // determine label CSS based on layout
+    let labelStyle = "width:320px;";
+    if (printLayout === "40x30") {
+      labelStyle = "width:40mm;height:30mm;";
+    } else if (printLayout === "50x80") {
+      labelStyle = "width:50mm;height:80mm;";
+    }
+
+    for (let i = 0; i < finalCount; i++) {
       for (const code of selected) {
         const b = boxes.find((bb) => bb.code === code)!;
         const img = qrMap[code] || "";
-        itemsHtml.push(`<div class="label"><div class="code">${code}</div>${b.name ? `<div class="name">${b.name}</div>` : ""}${b.location ? `<div class="loc">${b.location}</div>` : ""}<img src="${img}" /></div>`);
+        itemsHtml.push(`<div class="label" style="${labelStyle}"><div class="code">${code}</div>${b.name ? `<div class="name">${b.name}</div>` : ""}${b.location ? `<div class="loc">${b.location}</div>` : ""}<img src="${img}" /></div>`);
       }
     }
 
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Print Labels</title><style>body{padding:20px;font-family:Arial} .label{border:1px solid #000;padding:12px;border-radius:8px;display:inline-block;margin:8px;width:320px;box-sizing:border-box} .label img{width:100%;height:auto;display:block;margin-top:8px} .label .code{font-weight:900;font-size:18px;text-align:center;width:100%}.no-print{display:none}</style></head><body>${itemsHtml.join("")}</body></html>`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Print Labels</title><style>body{padding:20px;font-family:Arial} .label{border:1px solid #000;padding:8px;border-radius:8px;display:inline-block;margin:6px;box-sizing:border-box;vertical-align:top;overflow:hidden} .label img{width:100%;height:auto;display:block;margin-top:6px} .label .code{font-weight:900;font-size:16px;text-align:center;width:100%}.no-print{display:none}@media print{body{padding:6mm} .label{page-break-inside:avoid}}</style></head><body>${itemsHtml.join("")}</body></html>`;
 
     win.document.open();
     win.document.write(html);
@@ -125,10 +169,7 @@ export default function LabelsPage() {
 
   async function shareSelected() {
     if (selected.length === 0) return;
-    const canShareFiles = !!(navigator as any).canShare || !!(navigator as any).share;
-
     try {
-      // try to share images (if supported)
       const files: File[] = [];
       for (const code of selected) {
         const data = qrMap[code];
@@ -143,7 +184,6 @@ export default function LabelsPage() {
       } else if ((navigator as any).share) {
         await (navigator as any).share({ title: "Box labels", text: `Boxes: ${selected.join(", ")}` });
       } else {
-        // fallback: copy text to clipboard
         await navigator.clipboard.writeText(`Boxes: ${selected.join(", ")}`);
         alert("Copied box list to clipboard (share fallback)");
       }
@@ -183,7 +223,7 @@ export default function LabelsPage() {
             Tip: In print settings, enable “Background graphics” for cleaner QR edges (optional).
           </p>
 
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", position: "relative" }}>
             <button
               type="button"
               onClick={() => window.print()}
@@ -200,15 +240,32 @@ export default function LabelsPage() {
               Print
             </button>
 
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                Layout:
+                <select value={printLayout} onChange={(e) => setPrintLayout(e.target.value)} style={{ padding: 6, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                  <option value="default">Default</option>
+                  <option value="40x30">40 x 30 (mm)</option>
+                  <option value="50x80">50 x 80 (mm)</option>
+                </select>
+              </label>
+            </div>
+
+            {showHint && (
+              <div style={{ position: "absolute", right: 6, top: -6, background: "#111", color: "#fff", padding: "8px 12px", borderRadius: 8, boxShadow: "0 6px 24px rgba(0,0,0,0.16)", fontSize: 13 }}>
+                Long-press a label to select multiple. <button onClick={dismissHint} style={{ marginLeft: 8, background: "transparent", color: "#fff", border: "none", fontWeight: 800, cursor: "pointer" }}>Got it</button>
+              </div>
+            )}
+
             {selected.length > 0 && (
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <div style={{ fontWeight: 800 }}>{selected.length} selected</div>
                 <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   Copies:
-                  <input type="number" value={copies} min={1} onChange={(e) => setCopies(Math.max(1, Number(e.target.value) || 1))} style={{ width: 70, padding: 6, borderRadius: 8, border: "1px solid #e5e7eb" }} />
+                  <input type="number" value={copies} onChange={(e) => setCopies(e.target.value)} placeholder="1" style={{ width: 80, padding: 6, borderRadius: 8, border: "1px solid #e5e7eb" }} />
                 </label>
 
-                <button onClick={() => printSelected(copies)} className="tap-btn">Print selected</button>
+                <button onClick={() => printSelected()} className="tap-btn">Print selected</button>
                 <button onClick={shareSelected} className="tap-btn">Share</button>
                 <button onClick={clearSelection} className="tap-btn">Clear</button>
               </div>
