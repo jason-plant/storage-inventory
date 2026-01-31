@@ -264,22 +264,25 @@ export default function LabelsPage() {
     const html2canvas = (await import("html2canvas")).default;
     const finalCount = parseCopies();
     if (finalCount < 1) return alert("Please enter a quantity of at least 1");
+    // 40mm x 30mm at 12px/mm = 480 x 360 px
+    const pxWidth = 480;
+    const pxHeight = 360;
     for (let i = 0; i < finalCount; i++) {
       for (const code of selected) {
         const b = boxes.find((bb) => bb.code === code)!;
-        // create offscreen element sized to 40mm x 30mm (width x height)
+        // create offscreen element sized to 480x360px
         const el = document.createElement("div");
-        el.style.width = "40mm";
-        el.style.height = "30mm";
-        el.style.padding = "4mm";
+        el.style.width = pxWidth + "px";
+        el.style.height = pxHeight + "px";
+        el.style.padding = "36px"; // 3mm
         el.style.boxSizing = "border-box";
         el.style.border = "1px solid #000";
         el.style.background = "#fff";
-        el.innerHTML = `<div style="font-weight:900;font-size:8mm;text-align:center;width:100%">${code}</div>${b.name ? `<div style="text-align:center;font-size:4mm;margin-top:2mm">${b.name}</div>` : ""}${b.location ? `<div style="text-align:center;font-size:3.5mm;margin-top:1mm">${b.location}</div>` : ""}<img src="${qrMap[code] || ""}" style="width:70%;display:block;margin:2mm auto" />`;
+        el.innerHTML = `<div style="font-weight:900;font-size:96px;text-align:center;width:100%">${code}</div>${b.name ? `<div style="text-align:center;font-size:48px;margin-top:18px">${b.name}</div>` : ""}${b.location ? `<div style="text-align:center;font-size:42px;margin-top:9px">${b.location}</div>` : ""}<img src="${qrMap[code] || ""}" style="width:70%;display:block;margin:18px auto" />`;
         el.style.position = "absolute";
         el.style.left = "-9999px";
         document.body.appendChild(el);
-        const canvas = await html2canvas(el, { scale: 2 });
+        const canvas = await html2canvas(el, { scale: 1 });
         const dataUrl = canvas.toDataURL("image/png");
         // Download the image
         const a = document.createElement("a");
