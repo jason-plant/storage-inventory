@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import QRCode from "qrcode";
 import { supabase } from "../../lib/supabaseClient";
 import RequireAuth from "../../components/RequireAuth";
+import EditIconButton from "../../components/EditIconButton";
+import DeleteIconButton from "../../components/DeleteIconButton";
 import { useUnsavedChanges } from "../../components/UnsavedChangesProvider";
 
 type BoxRow = {
@@ -798,43 +800,21 @@ export default function BoxPage() {
 
                     {!moveMode && (
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                        <EditIconButton
+                          onClick={(e: any) => {
+                            e?.stopPropagation();
                             openEditItem(i);
                           }}
                           disabled={busy}
-                          style={{
-                            border: "1px solid #e5e7eb",
-                            color: "#111",
-                            background: "#fff",
-                            fontWeight: 900,
-                            borderRadius: 16,
-                            padding: "10px 14px",
-                          }}
-                        >
-                          Edit
-                        </button>
+                        />
 
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                        <DeleteIconButton
+                          onClick={(e: any) => {
+                            e?.stopPropagation();
                             requestDeleteItem(i, "button");
                           }}
                           disabled={busy}
-                          style={{
-                            border: "1px solid rgba(239,68,68,0.45)",
-                            color: "#b91c1c",
-                            background: "#fff",
-                            fontWeight: 900,
-                            borderRadius: 16,
-                            padding: "10px 14px",
-                          }}
-                        >
-                          Delete
-                        </button>
+                        />
                       </div>
                     )}
                   </div>

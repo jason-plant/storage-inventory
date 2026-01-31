@@ -4,7 +4,7 @@ export default function DeleteIconButton({
   disabled = false,
   variant = "outline",
 }: {
-  onClick: () => void;
+  onClick: (e?: any) => void;
   title?: string;
   disabled?: boolean;
   variant?: "outline" | "solid";

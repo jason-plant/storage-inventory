@@ -3,7 +3,7 @@ export default function EditIconButton({
   title = "Edit",
   disabled = false,
 }: {
-  onClick: () => void;
+  onClick: (e?: any) => void;
   title?: string;
   disabled?: boolean;
 }) {
