@@ -135,18 +135,21 @@ export default function SearchPage() {
                 }}
               >
                 {i.photo_url && (
-                  <img
-                    src={i.photo_url}
-                    alt={i.name}
-                    style={{
-                      width: 84,
-                      height: 84,
-                      objectFit: "cover",
-                      borderRadius: 14,
-                      border: "1px solid #e5e7eb",
-                      flex: "0 0 auto",
-                    }}
-                  />
+                  <a href={i.photo_url} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={i.photo_url}
+                      alt={i.name}
+                      style={{
+                        width: 84,
+                        height: 84,
+                        objectFit: "cover",
+                        borderRadius: 14,
+                        border: "1px solid #e5e7eb",
+                        flex: "0 0 auto",
+                        cursor: "pointer",
+                      }}
+                    />
+                  </a>
                 )}
 
                 <div style={{ flex: 1 }}>
