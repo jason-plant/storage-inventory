@@ -105,21 +105,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   padding: "12px 16px",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "space-between",
                   gap: 12,
                 }}
               >
                 {/* Dynamic page title + icon */}
-                <HeaderTitle />
-
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}>
+                  <HeaderTitle />
+                </div>
                 {/* Back button + Burger (stay top-right) */}
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                   {/* Back arrow (navigates history or fallback) */}
                   <BackButton />
-
                   {/* Help button */}
                   <HelpButton />
-
                   {/* Burger menu */}
                   <BurgerMenu />
                 </div>
