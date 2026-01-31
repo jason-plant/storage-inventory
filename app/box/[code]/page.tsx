@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -54,19 +53,14 @@ function getStoragePathFromPublicUrl(url: string) {
 
 export default function BoxPage() {
 
-    // ...existing state and variable declarations...
 
-    // Listen for edit modal open event from search page
-    useEffect(() => {
-      function handleOpenEditModal(e: any) {
-        const { itemId, boxCode } = e.detail || {};
-        if (boxCode && code && boxCode !== code) return; // only open if box matches
-        const item = items.find((it) => it.id === itemId);
-        if (item) openEditItem(item);
-      }
-      window.addEventListener("open-edit-item-modal", handleOpenEditModal);
-      return () => window.removeEventListener("open-edit-item-modal", handleOpenEditModal);
-    }, [items, code]);
+
+
+
+
+  // ...all state and variable declarations above...
+
+
   const params = useParams<{ code?: string }>();
   const code = params?.code ? decodeURIComponent(String(params.code)) : "";
 
@@ -128,6 +122,18 @@ export default function BoxPage() {
   const [editNewPhoto, setEditNewPhoto] = useState<File | null>(null);
 
   const { setDirty } = useUnsavedChanges();
+
+  // Listen for edit modal open event from search page
+  useEffect(() => {
+    function handleOpenEditModal(e: any) {
+      const { itemId, boxCode } = e.detail || {};
+      if (boxCode && code && boxCode !== code) return; // only open if box matches
+      const item = items.find((it) => it.id === itemId);
+      if (item) openEditItem(item);
+    }
+    window.addEventListener("open-edit-item-modal", handleOpenEditModal);
+    return () => window.removeEventListener("open-edit-item-modal", handleOpenEditModal);
+  }, [items, code]);
 
   useEffect(() => {
     if (!code) return;
@@ -761,7 +767,7 @@ export default function BoxPage() {
       el.style.padding = "8px";
       el.style.boxSizing = "border-box";
       el.style.border = "1px solid #000";
-      el.innerHTML = `<div style="font-weight:900;font-size:26px;text-align:center;width:100%">${box.code}</div>${box.name ? `<div style=\"text-align:center;font-size:12px;margin-top:6px\">${box.name}</div>` : ""}${box.location ? `<div style=\"text-align:center;font-size:11px;margin-top:4px\">${box.location}</div>` : ""}<img src=\"${await QRCode.toDataURL(`${window.location.origin}/box/${encodeURIComponent(box.code)}`, { width: 320, margin: 1 })}\" style=\"width:70%;display:block;margin:6px auto\" />`;
+      el.innerHTML = `<div style="font-weight:900;font-size:26px;text-align:center;width:100%">${box.code}</div>${box.name ? `<div style="text-align:center;font-size:12px;margin-top:6px">${box.name}</div>` : ""}${box.location ? `<div style="text-align:center;font-size:11px;margin-top:4px">${box.location}</div>` : ""}<img src="${await QRCode.toDataURL(`${window.location.origin}/box/${encodeURIComponent(box.code)}`, { width: 320, margin: 1 })}" style="width:70%;display:block;margin:6px auto" />`;
       el.style.position = "absolute";
       el.style.left = "-9999px";
       document.body.appendChild(el);
@@ -811,7 +817,7 @@ export default function BoxPage() {
         el.style.padding = "6px";
         el.style.boxSizing = "border-box";
         el.style.border = "1px solid #000";
-        el.innerHTML = `<div style="font-weight:900;font-size:26px;text-align:center;width:100%">${box.code}</div>${box.name ? `<div style=\"text-align:center;font-size:12px;margin-top:6px\">${box.name}</div>` : ""}${box.location ? `<div style=\"text-align:center;font-size:11px;margin-top:4px\">${box.location}</div>` : ""}<img src=\"${await QRCode.toDataURL(`${window.location.origin}/box/${encodeURIComponent(box.code)}`, { width: 320, margin: 1 })}\" style=\"width:70%;display:block;margin:6px auto\" />`;
+        el.innerHTML = `<div style="font-weight:900;font-size:26px;text-align:center;width:100%">${box.code}</div>${box.name ? `<div style="text-align:center;font-size:12px;margin-top:6px">${box.name}</div>` : ""}${box.location ? `<div style="text-align:center;font-size:11px;margin-top:4px">${box.location}</div>` : ""}<img src="${await QRCode.toDataURL(`${window.location.origin}/box/${encodeURIComponent(box.code)}`, { width: 320, margin: 1 })}" style="width:70%;display:block;margin:6px auto" />`;
         el.style.position = "absolute";
         el.style.left = "-9999px";
         document.body.appendChild(el);
