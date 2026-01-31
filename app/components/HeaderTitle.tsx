@@ -6,7 +6,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAppIcon } from "./Icons";
 
-type Meta = { title: string; Icon: React.ComponentType; href: string };
 type Meta = { title: string; iconKey: string; href: string };
 
 export default function HeaderTitle() {
