@@ -3,6 +3,8 @@ import React from "react";
 import Image from "next/image";
 import { AuthProvider } from "./lib/auth";
 import BurgerMenu from "./components/BurgerMenu";
+import BackButton from "./components/BackButton";
+import { UnsavedChangesProvider } from "./components/UnsavedChangesProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -33,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         }}
       >
         <AuthProvider>
+          <UnsavedChangesProvider>
           <style>{`
             :root{
               --border:#e5e7eb;
@@ -108,8 +111,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   </div>
                 </a>
 
-                {/* Burger button stays top-right */}
-                <BurgerMenu />
+                {/* Back button + Burger (stay top-right) */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {/* Back arrow (navigates history or fallback) */}
+                  <BackButton />
+
+                  {/* Burger menu */}
+                  <BurgerMenu />
+                </div>
               </div>
             </nav>
 
@@ -124,6 +133,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {children}
             </div>
           </div>
+          </UnsavedChangesProvider>
         </AuthProvider>
       </body>
     </html>

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import QRCode from "qrcode";
 import { supabase } from "../../lib/supabaseClient";
 import RequireAuth from "../../components/RequireAuth";
+import { useUnsavedChanges } from "../../components/UnsavedChangesProvider";
 
 type BoxRow = {
   id: string;
@@ -102,10 +103,13 @@ export default function BoxPage() {
   const [editQty, setEditQty] = useState<number>(0);
   const [editRemovePhoto, setEditRemovePhoto] = useState(false);
 
+
   // Photo inputs: choose OR take
   const chooseFileInputRef = useRef<HTMLInputElement | null>(null);
   const takePhotoInputRef = useRef<HTMLInputElement | null>(null);
   const [editNewPhoto, setEditNewPhoto] = useState<File | null>(null);
+
+  const { setDirty } = useUnsavedChanges();
 
   useEffect(() => {
     if (!code) return;
@@ -408,7 +412,9 @@ export default function BoxPage() {
 
     setItems((prev) => prev.map((x) => (x.id === it.id ? (res.data as ItemRow) : x)));
 
-    setEditItemOpen(false);
+// clear dirty when edits are saved
+      setDirty(false);
+      setEditItemOpen(false);
     editItemRef.current = null;
     setEditNewPhoto(null);
     setEditRemovePhoto(false);
@@ -1191,6 +1197,7 @@ export default function BoxPage() {
                 type="button"
                 onClick={() => {
                   if (busy) return;
+                  setDirty(false);
                   setEditItemOpen(false);
                   editItemRef.current = null;
                   setEditNewPhoto(null);

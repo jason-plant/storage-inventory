@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import RequireAuth from "../../components/RequireAuth";
+import { useUnsavedChanges } from "../../components/UnsavedChangesProvider";
 
 type BoxMini = { code: string };
 
@@ -47,6 +48,13 @@ function NewBoxInner() {
   // ✅ user-visible fields only
   const [name, setName] = useState("");
   const [locationId, setLocationId] = useState<string>(initialLocationId);
+
+  const { setDirty } = useUnsavedChanges();
+
+  useEffect(() => {
+    const dirty = name.trim() !== "" || Boolean(locationId);
+    setDirty(dirty);
+  }, [name, locationId, setDirty]);
 
   // Inline "create location" modal
   const [newLocOpen, setNewLocOpen] = useState(false);
@@ -221,6 +229,7 @@ function NewBoxInner() {
     }
 
     // ✅ return to location if provided, otherwise boxes list
+    setDirty(false);
     const dest = returnTo ? decodeURIComponent(returnTo) : "/boxes";
     router.push(dest);
     router.refresh();

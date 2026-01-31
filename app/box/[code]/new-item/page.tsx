@@ -1,9 +1,10 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import RequireAuth from "../../../components/RequireAuth";
+import { useUnsavedChanges } from "../../../components/UnsavedChangesProvider";
 
 export default function NewItemPage() {
   const params = useParams<{ code?: string }>();
@@ -14,6 +15,13 @@ export default function NewItemPage() {
   const [desc, setDesc] = useState("");
   const [qty, setQty] = useState(1);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+
+  const { setDirty } = useUnsavedChanges();
+
+  useEffect(() => {
+    const dirty = name.trim() !== "" || desc.trim() !== "" || qty !== 1 || Boolean(photoFile);
+    setDirty(dirty);
+  }, [name, desc, qty, photoFile, setDirty]);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +104,7 @@ export default function NewItemPage() {
     }
 
     // 4️⃣ Done → back to box
+    setDirty(false);
     router.push(`/box/${encodeURIComponent(code)}`);
   }
 
@@ -180,7 +189,7 @@ export default function NewItemPage() {
             </div>
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
-              <button onClick={() => router.push(`/box/${encodeURIComponent(code)}`)}>
+              <button onClick={() => { setDirty(false); router.push(`/box/${encodeURIComponent(code)}`); }}>
                 Cancel
               </button>
 

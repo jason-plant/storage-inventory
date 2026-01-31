@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import RequireAuth from "../components/RequireAuth";
+import { useUnsavedChanges } from "../components/UnsavedChangesProvider";
 import { supabase } from "../lib/supabaseClient";
 
 type BoxRow = {
@@ -64,6 +65,15 @@ function ScanItemInner() {
   const [name, setName] = useState("");
   const [qty, setQty] = useState<number>(1);
   const [desc, setDesc] = useState("");
+
+  // Unsaved changes tracking
+  const { setDirty } = useUnsavedChanges();
+
+  // mark dirty when any of the form fields change
+  useEffect(() => {
+    const dirty = Boolean(capturedFile) || name.trim() !== "" || desc.trim() !== "" || qty !== 1;
+    setDirty(dirty);
+  }, [capturedFile, name, desc, qty, setDirty]);
 
   async function loadBoxes() {
     setError(null);
@@ -306,7 +316,8 @@ function ScanItemInner() {
       return;
     }
 
-    // 4) Return to box
+    // Clear dirty state and return to box
+    setDirty(false);
     router.push(`/box/${encodeURIComponent(selectedBox.code)}`);
     router.refresh();
   }
@@ -485,7 +496,7 @@ function ScanItemInner() {
         </label>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
-          <button type="button" onClick={() => router.push("/boxes")} disabled={busy}>
+          <button type="button" onClick={() => { setDirty(false); router.push("/boxes"); }} disabled={busy}>
             Cancel
           </button>
 

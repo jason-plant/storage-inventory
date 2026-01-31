@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase } from "../lib/supabaseClient";
 import EditIconButton from "../components/EditIconButton";
 import DeleteIconButton from "../components/DeleteIconButton";
+import { useUnsavedChanges } from "../components/UnsavedChangesProvider";
 
 type LocationRow = {
   id: string;
@@ -39,6 +40,17 @@ function LocationsInner() {
   const [editOpen, setEditOpen] = useState(false);
   const editLocRef = useRef<LocationRow | null>(null);
   const [editName, setEditName] = useState("");
+
+  const { setDirty } = useUnsavedChanges();
+
+  useEffect(() => {
+    if (!editOpen) {
+      setDirty(false);
+      return;
+    }
+    const base = editLocRef.current?.name ?? "";
+    setDirty(editName.trim() !== base);
+  }, [editOpen, editName, setDirty]);
 
   async function load() {
     setLoading(true);
@@ -130,6 +142,7 @@ function LocationsInner() {
     setEditOpen(false);
     editLocRef.current = null;
     setEditName("");
+    setDirty(false);
     setBusy(false);
   }
 
