@@ -21,7 +21,7 @@ export default function SettingsPage() {
       <main style={{ padding: 16 }}>
         <h1 style={{ marginTop: 6, marginBottom: 10 }}>Settings</h1>
 
-        <section style={{ background: "var(--surface)", border: "1px solid var(--border)", padding: 12, borderRadius: 14 }}>
+        <section style={{ background: "var(--surface)", border: "1px solid var(--border)", padding: 12, borderRadius: 14, boxSizing: "border-box", overflow: "hidden" }}>
           <h2 style={{ margin: "0 0 8px 0" }}>Appearance</h2>
 
           <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
@@ -37,7 +37,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))", gap: 10, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(0, 1fr))", gap: 10, alignItems: "start", width: "100%", boxSizing: "border-box" }}>
             {(["ivory", "stone", "warm", "charcoal"] as Array<keyof typeof PALETTES>).map((k) => (
               <button
                 key={k}
@@ -58,6 +58,7 @@ export default function SettingsPage() {
                   background: "var(--surface)",
                   width: "100%",
                   cursor: "pointer",
+                  boxSizing: "border-box",
                 }}
               >
                 <div style={{ width: 56, height: 30, borderRadius: 8, background: PALETTES[k].bg, border: `1px solid ${PALETTES[k].border}` }} />
