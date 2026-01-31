@@ -48,10 +48,11 @@ export default function SearchPage() {
       }
 
       // ✅ Pull location via boxes.location_id -> locations.name
+
+      // Search for items where the query matches item name, box code, box name, or location name
       const res = await supabase
         .from("items")
-        .select(
-          `
+        .select(`
           id,
           name,
           description,
@@ -62,10 +63,9 @@ export default function SearchPage() {
             name,
             location:locations ( name )
           )
-        `
-        )
+        `)
         .eq("owner_id", userId)
-        .ilike("name", `%${q}%`)
+        .or(`name.ilike.%${q}%,boxes.code.ilike.%${q}%,boxes.name.ilike.%${q}%,boxes.location_id.in.(select id from locations where name ilike '%${q}%')`)
         .limit(50);
 
       if (res.error) {
