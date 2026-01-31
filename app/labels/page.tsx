@@ -496,6 +496,25 @@ export default function LabelsPage() {
               </label>
             </div>
 
+            {/* Preview */}
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <div style={{ width: 160, border: "1px solid #000", padding: 8, borderRadius: 8, textAlign: "center" }}>
+                <div style={{ fontWeight: 900, fontSize: 26 }}>{selected.length > 0 ? selected[0] : (boxes[0]?.code ?? "BOX-CODE")}</div>
+                <div style={{ marginTop: 6 }}>
+                  {selected.length > 0 && qrMap[selected[0]] ? (
+                    <img src={qrMap[selected[0]]} alt="preview" style={{ width: "70%", display: "block", margin: "6px auto" }} />
+                  ) : boxes[0] && qrMap[boxes[0].code] ? (
+                    <img src={qrMap[boxes[0].code]} alt="preview" style={{ width: "70%", display: "block", margin: "6px auto" }} />
+                  ) : (
+                    <div style={{ width: "70%", height: 80, background: "#f0f0f0", margin: "6px auto" }} />
+                  )}
+                </div>
+                {selected.length > 0 && (boxes.find((b) => b.code === selected[0])?.name) && (
+                  <div style={{ fontSize: 12 }}>{boxes.find((b) => b.code === selected[0])?.name}</div>
+                )}
+              </div>
+            </div>
+
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => { setShowPrintModal(false); printSelected(); }} className="tap-btn">Print (system)</button>
               <button onClick={() => { setShowPrintModal(false); exportSelectedPDF(); }} className="tap-btn primary">Export PDF</button>

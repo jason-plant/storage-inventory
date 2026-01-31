@@ -643,6 +643,26 @@ export default function BoxPage() {
   const [printLayout, setPrintLayout] = useState<string>("default");
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showBluetoothConfirm, setShowBluetoothConfirm] = useState(false);
+  const [previewQr, setPreviewQr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function makePreview() {
+      if (!showPrintModal || !box) {
+        if (mounted) setPreviewQr(null);
+        return;
+      }
+      try {
+        const dataUrl = await QRCode.toDataURL(`${window.location.origin}/box/${encodeURIComponent(box.code)}`, { margin: 1, width: 320 });
+        if (mounted) setPreviewQr(dataUrl);
+      } catch (e) {
+        console.warn(e);
+        if (mounted) setPreviewQr(null);
+      }
+    }
+    makePreview();
+    return () => { mounted = false; };
+  }, [showPrintModal, box]);
 
   function parseCopies(): number {
     const n = parseInt(copies || "", 10);
@@ -1403,7 +1423,22 @@ export default function BoxPage() {
                 </label>
               </div>
 
-              <div style={{ display: "flex", gap: 8 }}>
+                {/* Preview */}
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <div style={{ width: 160, border: "1px solid #000", padding: 8, borderRadius: 8, textAlign: "center" }}>
+                <div style={{ fontWeight: 900, fontSize: 26 }}>{box?.code ?? ""}</div>
+                <div style={{ marginTop: 6 }}>
+                  {previewQr ? (
+                    <img src={previewQr} alt="preview" style={{ width: "70%", display: "block", margin: "6px auto" }} />
+                  ) : (
+                    <div style={{ width: "70%", height: 80, background: "#f0f0f0", margin: "6px auto" }} />
+                  )}
+                </div>
+                {box?.name && <div style={{ fontSize: 12 }}>{box.name}</div>}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => { setShowPrintModal(false); printSingle(); }} className="tap-btn">Print (system)</button>
                 <button onClick={() => { setShowPrintModal(false); exportSinglePDF(); }} className="tap-btn primary">Export PDF</button>
                 <button onClick={() => { setShowPrintModal(false); setShowBluetoothConfirm(true); }} className="tap-btn">Bluetooth print</button>
