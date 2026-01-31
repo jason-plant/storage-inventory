@@ -9,8 +9,7 @@ import { useAuth } from "../lib/auth";
 const ThemeToggleSmall = React.lazy(() => import("./ThemeToggle").then((m) => ({ default: () => <m.default small /> })));
 
 /* ===== Icons ===== */
-import { IconLocations, IconBoxes, IconSearch, IconLabels, IconScanQR, IconScanItem } from "./Icons";
-const IconLogout = () => <span>🚪</span>;
+import { useAppIcon } from "./Icons";
 
 function MenuRow({
   icon,
@@ -110,12 +109,12 @@ export default function BurgerMenu() {
   const items = useMemo(() => {
     if (!user) return [];
     return [
-      { label: "Locations", href: "/locations", icon: <IconLocations /> },
-      { label: "Boxes", href: "/boxes", icon: <IconBoxes /> },
-      { label: "Search", href: "/search", icon: <IconSearch /> },
-      { label: "Labels", href: "/labels", icon: <IconLabels /> },
-      { label: "Scan QR", href: "/scan", icon: <IconScanQR /> },
-      { label: "Scan Item", href: "/scan-item", icon: <IconScanItem /> },
+      { label: "Locations", href: "/locations", icon: useAppIcon("locations") },
+      { label: "Boxes", href: "/boxes", icon: useAppIcon("boxes") },
+      { label: "Search", href: "/search", icon: useAppIcon("search") },
+      { label: "Labels", href: "/labels", icon: useAppIcon("labels") },
+      { label: "Scan QR", href: "/scan", icon: useAppIcon("scanQR") },
+      { label: "Scan Item", href: "/scan-item", icon: useAppIcon("scanItem") },
     ];
   }, [user]);
 
@@ -206,11 +205,11 @@ export default function BurgerMenu() {
           ))}
 
           {/* Settings */}
-          <MenuRow icon={<span>⚙️</span>} label="Settings" onClick={() => go("/settings")} />
+          <MenuRow icon={<span role="img" aria-label="Settings">⚙️</span>} label="Settings" onClick={() => go("/settings")} />
 
           {user && (
             <MenuRow
-              icon={<IconLogout />}
+              icon={useAppIcon("logout")}
               label="Log out"
               onClick={async () => {
                 setOpen(false);

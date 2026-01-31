@@ -8,35 +8,32 @@ export const Icon = ({ children }: { children: React.ReactNode }) => (
   </svg>
 );
 
-export const IconLocations = () => (
+// SVG versions
+export const IconLocationsSVG = () => (
   <Icon>
     <path d="M21 10c0 6-9 13-9 13S3 16 3 10a9 9 0 0118 0z" />
     <circle cx="12" cy="10" r="3" />
   </Icon>
 );
-
-export const IconBoxes = () => (
+export const IconBoxesSVG = () => (
   <Icon>
     <path d="M21 16V8a2 2 0 00-1-1.73L13 3a2 2 0 00-2 0L4 6.27A2 2 0 003 8v8a2 2 0 001 1.73L11 21a2 2 0 002 0l7-3.27A2 2 0 0021 16z" />
     <path d="M7 9l5 3 5-3" />
   </Icon>
 );
-
-export const IconSearch = () => (
+export const IconSearchSVG = () => (
   <Icon>
     <circle cx="11" cy="11" r="6" />
     <path d="M21 21l-4.35-4.35" />
   </Icon>
 );
-
-export const IconLabels = () => (
+export const IconLabelsSVG = () => (
   <Icon>
     <path d="M3 7v6a2 2 0 001 1.73L12 20l7-4.27A2 2 0 0020 14V8a2 2 0 00-1-1.73L12 2 4 6.27A2 2 0 003 7z" />
     <circle cx="8.5" cy="10.5" r="1.5" />
   </Icon>
 );
-
-export const IconScanQR = () => (
+export const IconScanQRSVG = () => (
   <Icon>
     <rect x="3" y="3" width="5" height="5" />
     <rect x="16" y="3" width="5" height="5" />
@@ -44,18 +41,53 @@ export const IconScanQR = () => (
     <path d="M14 14h2v2h-2z" />
   </Icon>
 );
-
-export const IconScanItem = () => (
+export const IconScanItemSVG = () => (
   <Icon>
     <path d="M12 2v20" />
     <path d="M2 12h20" />
     <circle cx="12" cy="12" r="3" />
   </Icon>
 );
-
-export const IconHome = () => (
+export const IconHomeSVG = () => (
   <Icon>
     <path d="M3 11l9-7 9 7" />
     <path d="M9 22V12h6v10" />
   </Icon>
 );
+
+// Emoji versions
+export const IconLocationsEmoji = () => <span role="img" aria-label="Locations">📍</span>;
+export const IconBoxesEmoji = () => <span role="img" aria-label="Boxes">📦</span>;
+export const IconSearchEmoji = () => <span role="img" aria-label="Search">🔍</span>;
+export const IconLabelsEmoji = () => <span role="img" aria-label="Labels">🏷️</span>;
+export const IconScanQREmoji = () => <span role="img" aria-label="Scan QR">� QR</span>;
+export const IconScanItemEmoji = () => <span role="img" aria-label="Scan Item">🧾</span>;
+export const IconHomeEmoji = () => <span role="img" aria-label="Home">🏠</span>;
+
+// Utility to select icon version
+import { useIconSettings } from "../lib/iconSettings";
+import type { IconKey } from "../lib/iconSettings";
+
+const iconMap: Record<IconKey, { svg: React.ComponentType; emoji: React.ComponentType }> = {
+  locations: { svg: IconLocationsSVG, emoji: IconLocationsEmoji },
+  boxes: { svg: IconBoxesSVG, emoji: IconBoxesEmoji },
+  search: { svg: IconSearchSVG, emoji: IconSearchEmoji },
+  labels: { svg: IconLabelsSVG, emoji: IconLabelsEmoji },
+  scanQR: { svg: IconScanQRSVG, emoji: IconScanQREmoji },
+  scanItem: { svg: IconScanItemSVG, emoji: IconScanItemEmoji },
+  home: { svg: IconHomeSVG, emoji: IconHomeEmoji },
+  edit: { svg: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" /></svg>
+  ), emoji: () => <span role="img" aria-label="Edit">✏️</span> },
+  delete: { svg: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /></svg>
+  ), emoji: () => <span role="img" aria-label="Delete">🗑️</span> },
+  logout: { svg: () => <span>🚪</span>, emoji: () => <span>🚪</span> },
+};
+
+export function useAppIcon(key: IconKey) {
+  const { iconSettings } = useIconSettings();
+  const style = iconSettings[key] || "svg";
+  const Comp = iconMap[key][style];
+  return <Comp />;
+}

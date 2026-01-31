@@ -1,3 +1,6 @@
+import { useIconSettings } from "../lib/iconSettings";
+import { useAppIcon } from "../components/Icons";
+import type { IconKey } from "../lib/iconSettings";
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -9,6 +12,7 @@ import EditIconButton from "../components/EditIconButton";
 import DeleteIconButton from "../components/DeleteIconButton";
 
 export default function SettingsPage() {
+  const { iconSettings, setIconStyle } = useIconSettings();
   const [tab, setTab] = useState<'appearance' | 'profile'>('appearance');
   const [theme, setTheme] = useState<"light" | "dark">((typeof window !== "undefined" && getStoredTheme()) || "light");
   const [palette, setPalette] = useState<string>((typeof window !== "undefined" && getStoredPalette()) || "stone");
@@ -126,6 +130,41 @@ export default function SettingsPage() {
             {/* Appearance section (moved from above) */}
             <section style={{ background: "var(--surface)", border: "1px solid var(--border)", padding: 12, borderRadius: 14, boxSizing: "border-box", overflow: "hidden" }}>
               <h2 style={{ margin: "0 0 8px 0" }}>Appearance</h2>
+
+              {/* Icon style pickers */}
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>Icon style</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+                  {[
+                    { key: 'locations', label: 'Locations' },
+                    { key: 'boxes', label: 'Boxes' },
+                    { key: 'search', label: 'Search' },
+                    { key: 'labels', label: 'Labels' },
+                    { key: 'scanQR', label: 'Scan QR' },
+                    { key: 'scanItem', label: 'Scan Item' },
+                    { key: 'home', label: 'Home' },
+                    { key: 'edit', label: 'Edit' },
+                    { key: 'delete', label: 'Delete' },
+                    { key: 'logout', label: 'Logout' },
+                  ].map(({ key, label }) => {
+                    const iconKey = key as IconKey;
+                    return (
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 6, border: '1px solid var(--border)', borderRadius: 8 }}>
+                        <span style={{ minWidth: 28 }}>{useAppIcon(iconKey)}</span>
+                        <span style={{ flex: 1 }}>{label}</span>
+                        <select
+                          value={iconSettings[iconKey] || 'svg'}
+                          onChange={e => setIconStyle(iconKey, e.target.value as any)}
+                          style={{ borderRadius: 6, padding: '2px 8px' }}
+                        >
+                          <option value="svg">SVG</option>
+                          <option value="emoji">Emoji</option>
+                        </select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
               <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
                 <div style={{ marginLeft: "auto" }}>
                   <ThemeToggle />

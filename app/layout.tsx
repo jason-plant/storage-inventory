@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import React from "react";
 import Image from "next/image";
 import { AuthProvider } from "./lib/auth";
+import { IconSettingsProvider } from "./lib/iconSettings";
 import BurgerMenu from "./components/BurgerMenu";
 import BackButton from "./components/BackButton";
 import HeaderTitle from "./components/HeaderTitle";
@@ -42,9 +43,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           color: "var(--text)",
         }}
       >
-        <AuthProvider>
-          <UnsavedChangesProvider>
-          <style>{`
+        <IconSettingsProvider>
+          <AuthProvider>
+            <UnsavedChangesProvider>
+            <style>{`
             :root{
               --border:#e5e7eb;
               --shadow: 0 1px 10px rgba(0,0,0,0.06);
@@ -135,8 +137,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {children}
             </div>
           </div>
-          </UnsavedChangesProvider>
-        </AuthProvider>
+            </UnsavedChangesProvider>
+          </AuthProvider>
+        </IconSettingsProvider>
       </body>
     </html>
   );
