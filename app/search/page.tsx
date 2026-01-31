@@ -152,7 +152,7 @@ export default function SearchPage() {
                 <div style={{ flex: 1 }}>
                   {/* Location */}
                   {locationName && (
-                    <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 2, opacity: 0.85 }}>
+                    <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 2, opacity: 0.88 }}>
                       {locationName}
                     </div>
                   )}
@@ -166,7 +166,6 @@ export default function SearchPage() {
                   {/* Box number */}
                   {boxCode && (
                     <div style={{ marginTop: 10, opacity: 0.9 }}>
-                      <span style={{ fontWeight: 800 }}>Box:</span>{" "}
                       <a
                         href={`/box/${encodeURIComponent(boxCode)}`}
                         style={{
@@ -180,7 +179,6 @@ export default function SearchPage() {
                           fontWeight: 900,
                           textDecoration: "none",
                           color: "#111",
-                          marginLeft: 6,
                         }}
                       >
                         {boxCode}
