@@ -5,6 +5,7 @@ import { AuthProvider } from "./lib/auth";
 import BurgerMenu from "./components/BurgerMenu";
 import BackButton from "./components/BackButton";
 import HeaderTitle from "./components/HeaderTitle";
+import HelpButton from "./components/HelpButton";
 import { UnsavedChangesProvider } from "./components/UnsavedChangesProvider";
 import "./globals.css";
 
@@ -111,6 +112,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   {/* Back arrow (navigates history or fallback) */}
                   <BackButton />
+
+                  {/* Help button */}
+                  <HelpButton />
 
                   {/* Burger menu */}
                   <BurgerMenu />
