@@ -267,14 +267,15 @@ export default function LabelsPage() {
     for (let i = 0; i < finalCount; i++) {
       for (const code of selected) {
         const b = boxes.find((bb) => bb.code === code)!;
-        // create offscreen element
+        // create offscreen element sized to 40mm x 30mm (width x height)
         const el = document.createElement("div");
-        el.style.width = "320px";
-        el.style.padding = "8px";
+        el.style.width = "40mm";
+        el.style.height = "30mm";
+        el.style.padding = "4mm";
         el.style.boxSizing = "border-box";
         el.style.border = "1px solid #000";
         el.style.background = "#fff";
-        el.innerHTML = `<div style="font-weight:900;font-size:26px;text-align:center;width:100%">${code}</div>${b.name ? `<div style="text-align:center;font-size:12px;margin-top:6px">${b.name}</div>` : ""}${b.location ? `<div style="text-align:center;font-size:11px;margin-top:4px">${b.location}</div>` : ""}<img src="${qrMap[code] || ""}" style="width:70%;display:block;margin:6px auto" />`;
+        el.innerHTML = `<div style="font-weight:900;font-size:8mm;text-align:center;width:100%">${code}</div>${b.name ? `<div style="text-align:center;font-size:4mm;margin-top:2mm">${b.name}</div>` : ""}${b.location ? `<div style="text-align:center;font-size:3.5mm;margin-top:1mm">${b.location}</div>` : ""}<img src="${qrMap[code] || ""}" style="width:70%;display:block;margin:2mm auto" />`;
         el.style.position = "absolute";
         el.style.left = "-9999px";
         document.body.appendChild(el);
