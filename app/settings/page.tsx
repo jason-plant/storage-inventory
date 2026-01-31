@@ -25,7 +25,6 @@ export default function SettingsPage() {
           <h2 style={{ margin: "0 0 8px 0" }}>Appearance</h2>
 
           <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
-            <div style={{ fontWeight: 800 }}>Theme</div>
             <div style={{ marginLeft: "auto" }}>
               <ThemeToggle />
             </div>
