@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import RequireAuth from "../../components/RequireAuth";
+import EditIconButton from "../../components/EditIconButton";
+import DeleteIconButton from "../../components/DeleteIconButton";
 
 type LocationRow = {
   id: string;
@@ -584,45 +586,23 @@ function LocationInner() {
 
               {!moveMode && (
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    type="button"
+                  <span
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      openEditBox(b);
-                    }}
-                    disabled={busy}
-                    style={{
-                      border: "1px solid #e5e7eb",
-                      color: "#111",
-                      background: "#fff",
-                      fontWeight: 900,
-                      borderRadius: 16,
-                      padding: "10px 14px",
                     }}
                   >
-                    Edit
-                  </button>
+                    <EditIconButton title="Edit box" disabled={busy} onClick={() => openEditBox(b)} />
+                  </span>
 
-                  <button
-                    type="button"
+                  <span
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      requestDeleteBox(b);
-                    }}
-                    disabled={busy}
-                    style={{
-                      border: "1px solid rgba(239,68,68,0.45)",
-                      color: "#b91c1c",
-                      background: "#fff",
-                      fontWeight: 900,
-                      borderRadius: 16,
-                      padding: "10px 14px",
                     }}
                   >
-                    Delete
-                  </button>
+                    <DeleteIconButton title="Delete box" disabled={busy} onClick={() => requestDeleteBox(b)} />
+                  </span>
                 </div>
               )}
             </a>
