@@ -78,8 +78,10 @@ export default function SearchPage() {
           const qLower = q.toLowerCase();
           results = results.filter(item => {
             const locName = item.box?.location?.name?.toLowerCase() || "";
+            const desc = item.description?.toLowerCase() || "";
             return (
               item.name?.toLowerCase().includes(qLower) ||
+              desc.includes(qLower) ||
               item.box?.code?.toLowerCase().includes(qLower) ||
               item.box?.name?.toLowerCase().includes(qLower) ||
               locName.includes(qLower)
