@@ -66,14 +66,13 @@ export default function SearchPage() {
           )
         `)
         .eq("owner_id", userId)
-        .ilike("name", `%${q}%`)
-        .limit(100);
+        .limit(200);
 
       if (res.error) {
         setError(res.error.message);
         setItems([]);
       } else {
-        // Filter by box code, box name, and location name client-side
+        // Filter by item name, box code, box name, and location name client-side
         let results = (res.data ?? []) as unknown as SearchItem[];
         if (q) {
           const qLower = q.toLowerCase();
