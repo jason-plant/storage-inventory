@@ -194,15 +194,53 @@ export default function SettingsPage() {
                 <div style={{ marginTop: 14 }}>
                   <div style={{ fontWeight: 700, marginBottom: 6 }}>Saved themes:</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {savedThemes.map((t) => (
-                      <button
-                        key={t.name}
-                        onClick={() => applySavedTheme(t)}
-                        className="tap-btn"
-                        style={{ background: t.bg, color: t.text, border: `1.5px solid ${t.surface}`, minWidth: 90 }}
-                      >
-                        {t.name}
-                      </button>
+                    {savedThemes.map((t, idx) => (
+                      <div key={t.name} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <button
+                          onClick={() => applySavedTheme(t)}
+                          className="tap-btn"
+                          style={{ background: t.bg, color: t.text, border: `1.5px solid ${t.surface}`, minWidth: 90 }}
+                        >
+                          {t.name}
+                        </button>
+                        <button
+                          aria-label="Edit theme"
+                          className="tap-btn"
+                          style={{ padding: '2px 8px', fontSize: 13 }}
+                          onClick={() => {
+                            setCustomText(t.text);
+                            setCustomBg(t.bg);
+                            setCustomSurface(t.surface);
+                            setCustomName(t.name);
+                          }}
+                        >✏️</button>
+                        <button
+                          aria-label="Delete theme"
+                          className="tap-btn danger"
+                          style={{ padding: '2px 8px', fontSize: 13 }}
+                          onClick={() => {
+                            const next = savedThemes.filter((_, i) => i !== idx);
+                            setSavedThemes(next);
+                            localStorage.setItem("savedThemes", JSON.stringify(next));
+                          }}
+                        >🗑️</button>
+                        <button
+                          aria-label="Apply theme to all pages"
+                          className="tap-btn primary"
+                          style={{ padding: '2px 8px', fontSize: 13 }}
+                          onClick={() => {
+                            setCustomText(t.text);
+                            setCustomBg(t.bg);
+                            setCustomSurface(t.surface);
+                            document.documentElement.style.setProperty("--text", t.text);
+                            document.documentElement.style.setProperty("--bg", t.bg);
+                            document.documentElement.style.setProperty("--surface", t.surface);
+                            localStorage.setItem("customText", t.text);
+                            localStorage.setItem("customBg", t.bg);
+                            localStorage.setItem("customSurface", t.surface);
+                          }}
+                        >Apply</button>
+                      </div>
                     ))}
                   </div>
                 </div>
