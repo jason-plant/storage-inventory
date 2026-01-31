@@ -6,12 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
 
 /* ===== Icons ===== */
-const IconLocations = () => <span>📍</span>;
-const IconBoxes = () => <span>📦</span>;
-const IconSearch = () => <span>🔍</span>;
-const IconLabels = () => <span>🏷️</span>;
-const IconScanQR = () => <span>📷</span>;
-const IconScanItem = () => <span>➕</span>;
+import { IconLocations, IconBoxes, IconSearch, IconLabels, IconScanQR, IconScanItem } from "./Icons";
 const IconLogout = () => <span>🚪</span>;
 
 function MenuRow({

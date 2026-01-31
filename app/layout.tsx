@@ -4,6 +4,7 @@ import Image from "next/image";
 import { AuthProvider } from "./lib/auth";
 import BurgerMenu from "./components/BurgerMenu";
 import BackButton from "./components/BackButton";
+import HeaderTitle from "./components/HeaderTitle";
 import { UnsavedChangesProvider } from "./components/UnsavedChangesProvider";
 import "./globals.css";
 
@@ -98,18 +99,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   gap: 12,
                 }}
               >
-                <a
-                  href="/locations"
-                  style={{
-                    textDecoration: "none",
-                    color: "#111",
-                  }}
-                >
-                  <div style={{display: "flex", alignItems: "center", gap: 8}}>
-                    <Image src="/icons/icon-32.png" alt="Storage Inventory" width={36} height={36} />
-                    <span style={{fontWeight: 900, fontSize: 18}}>Storage Inventory</span>
-                  </div>
-                </a>
+                {/* Dynamic page title + icon */}
+                <HeaderTitle />
 
                 {/* Back button + Burger (stay top-right) */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
