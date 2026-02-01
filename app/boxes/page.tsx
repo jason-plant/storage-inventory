@@ -51,6 +51,8 @@ function BoxesInner() {
   const selectedRef = useRef<Set<string>>(new Set());
   const [destLocationId, setDestLocationId] = useState<string>("");
 
+  const [hideBoxCode, setHideBoxCode] = useState<boolean>(false);
+
   // Create location modal (for move flow)
   const [newLocOpen, setNewLocOpen] = useState(false);
   const [newLocName, setNewLocName] = useState("");
@@ -63,6 +65,14 @@ function BoxesInner() {
     toLocationName: string;
     boxIds: string[];
   } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const readSetting = () => setHideBoxCode(localStorage.getItem("hideBoxCode") === "1");
+    readSetting();
+    window.addEventListener("storage", readSetting);
+    return () => window.removeEventListener("storage", readSetting);
+  }, []);
 
   async function loadAll() {
     setLoading(true);
@@ -465,7 +475,7 @@ function BoxesInner() {
               }}
             >
               <div style={{ display: "grid", gap: 4 }}>
-                <div style={{ fontWeight: 900, fontSize: 16 }}>{b.code}</div>
+                {!hideBoxCode && <div style={{ fontWeight: 900, fontSize: 16 }}>{b.code}</div>}
 
                 {b.name && <div style={{ fontWeight: 700 }}>{b.name}</div>}
                 <div style={{ opacity: 0.8 }}>{b.location_name ? b.location_name : "No location"}</div>

@@ -59,6 +59,8 @@ function LocationInner() {
   const selectedRef = useRef<Set<string>>(new Set());
   const [destLocationId, setDestLocationId] = useState<string>("");
 
+  const [hideBoxCode, setHideBoxCode] = useState<boolean>(false);
+
   // Create location modal (from move flow)
   const [newLocOpen, setNewLocOpen] = useState(false);
   const [newLocName, setNewLocName] = useState("");
@@ -80,6 +82,14 @@ function LocationInner() {
   // ===== Delete box =====
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const boxToDeleteRef = useRef<BoxRow | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const readSetting = () => setHideBoxCode(localStorage.getItem("hideBoxCode") === "1");
+    readSetting();
+    window.addEventListener("storage", readSetting);
+    return () => window.removeEventListener("storage", readSetting);
+  }, []);
 
   function getStoragePathFromPublicUrl(url: string) {
     const marker = "/item-photos/";
@@ -547,7 +557,7 @@ function LocationInner() {
               }}
             >
               <div style={{ display: "grid", gap: 6 }}>
-                <div style={{ fontWeight: 900, fontSize: 16 }}>{b.code}</div>
+                {!hideBoxCode && <div style={{ fontWeight: 900, fontSize: 16 }}>{b.code}</div>}
 
                 {b.name ? <div style={{ fontWeight: 700 }}>{b.name}</div> : <div style={{ opacity: 0.6 }}>No name</div>}
 
