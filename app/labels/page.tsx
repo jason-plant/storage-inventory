@@ -204,12 +204,14 @@ export default function LabelsPage() {
         const codeSize = printLayout === "50x80" ? 64 : 36;
         const nameSize = printLayout === "50x80" ? 20 : 14;
         const locSize = printLayout === "50x80" ? 16 : 12;
+        const qrWidth = printLayout === "40x30" ? "58%" : "70%";
+        const qrMarginTop = printLayout === "40x30" ? "6px" : "10px";
 
         el.innerHTML = `
           <div style="font-weight:900;font-size:${codeSize}px;text-align:center;width:100%">${code}</div>
           ${b.name ? `<div style=\"text-align:center;font-size:${nameSize}px;margin-top:6px\">${b.name}</div>` : ""}
           ${b.location ? `<div style=\"text-align:center;font-size:${locSize}px;margin-top:4px;opacity:0.85\">${b.location}</div>` : ""}
-          <img src="${qr}" style="width:70%;display:block;margin:10px auto 0" />
+          <img src="${qr}" style="width:${qrWidth};display:block;margin:${qrMarginTop} auto 0" />
         `;
 
         el.style.position = "absolute";
