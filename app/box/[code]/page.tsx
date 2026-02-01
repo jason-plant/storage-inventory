@@ -871,7 +871,6 @@ export default function BoxPage() {
                 {box.location && <div style={{ opacity: 0.8 }}>Location: {box.location}</div>}
               </div>
 
-              <button onClick={() => printSingleQrLabel(box.code, box.name, box.location)}>Print QR</button>
             </div>
 
             {error && <p style={{ color: "crimson", marginTop: 10 }}>Error: {error}</p>}
@@ -1449,71 +1448,6 @@ export default function BoxPage() {
               </button>
             </div>
           </Modal>
-
-
-
-          {/* Print label modal and shareLabelImage function are both inside BoxPage */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  Copies:
-                  <input type="number" value={copies} onChange={(e) => setCopies(e.target.value)} placeholder="1" style={{ width: 80, padding: 6, borderRadius: 8, border: "1px solid #e5e7eb" }} />
-                </label>
-
-                <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  Layout:
-                  <select value={printLayout} onChange={(e) => setPrintLayout(e.target.value)} style={{ padding: 6, borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                    <option value="default">Default</option>
-                    <option value="40x30">40 x 30 (mm)</option>
-                    <option value="50x80">50 x 80 (mm)</option>
-                  </select>
-                </label>
-              </div>
-
-              {/* Preview */}
-              <div style={{ display: "flex", justifyContent: "center" }}>
-                <div style={{ width: 160, border: "1px solid #000", padding: 8, borderRadius: 8, textAlign: "center" }}>
-                  <div style={{ fontWeight: 900, fontSize: 26 }}>{box?.code ?? ""}</div>
-                  <div style={{ marginTop: 6 }}>
-                    {previewQr ? (
-                      <img src={previewQr} alt="preview" style={{ width: "70%", display: "block", margin: "6px auto" }} />
-                    ) : (
-                      <div style={{ width: "70%", height: 80, background: "#f0f0f0", margin: "6px auto" }} />
-                    )}
-                  </div>
-                  {box?.name && <div style={{ fontSize: 12 }}>{box.name}</div>}
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button onClick={() => { setShowPrintModal(false); printSingle(); }} className="tap-btn">Print (system)</button>
-                <button onClick={() => { setShowPrintModal(false); exportSinglePDF(); }} className="tap-btn primary">Export PDF</button>
-                <button onClick={() => { setShowPrintModal(false); setShowBluetoothConfirm(true); }} className="tap-btn">Bluetooth print</button>
-                <button onClick={async () => { setShowPrintModal(false); await shareLabelImage(); }} className="tap-btn">Share label</button>
-                <button onClick={() => setShowPrintModal(false)} className="tap-btn">Cancel</button>
-              </div>
-
-              <div style={{ fontSize: 13, opacity: 0.85 }}>
-                You can print to your printer via the system dialog, export a PDF, share the label image, or use experimental Bluetooth printing. Bluetooth support varies by device.
-              </div>
-            </div>
-
-
-          <Modal open={showBluetoothConfirm} title="Bluetooth printing" onClose={() => setShowBluetoothConfirm(false)}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ fontSize: 14 }}>
-                Bluetooth printing is experimental. Connect to a BLE label printer that accepts raw image data and proceed?
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={async () => { setShowBluetoothConfirm(false); await bluetoothPrintSingle(); }} className="tap-btn primary">Proceed</button>
-                <button onClick={() => setShowBluetoothConfirm(false)} className="tap-btn">Cancel</button>
-              </div>
-            </div>
-          </Modal>
-
-
-
-
 
 
     return (
