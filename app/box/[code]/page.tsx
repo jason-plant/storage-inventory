@@ -126,6 +126,8 @@ export default function BoxPage() {
   const takePhotoInputRef = useRef<HTMLInputElement | null>(null);
   const [editNewPhoto, setEditNewPhoto] = useState<File | null>(null);
 
+  const [hideBoxCode, setHideBoxCode] = useState<boolean>(false);
+
   const { setDirty } = useUnsavedChanges();
 
   // Listen for edit modal open event from search page
@@ -229,6 +231,14 @@ export default function BoxPage() {
 
     load();
   }, [code]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const readSetting = () => setHideBoxCode(localStorage.getItem("hideBoxCode") === "1");
+    readSetting();
+    window.addEventListener("storage", readSetting);
+    return () => window.removeEventListener("storage", readSetting);
+  }, []);
 
   async function reloadItems(boxId: string) {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -866,7 +876,7 @@ export default function BoxPage() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
               <div>
-                <h1 className="sr-only" style={{ margin: "0 0 6px 0" }}>{box.code}</h1>
+                {!hideBoxCode && <h1 className="sr-only" style={{ margin: "0 0 6px 0" }}>{box.code}</h1>}
                 {box.name && <div style={{ fontWeight: 800 }}>{box.name}</div>}
                 {box.location && <div style={{ opacity: 0.8 }}>Location: {box.location}</div>}
               </div>

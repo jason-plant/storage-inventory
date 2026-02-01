@@ -25,6 +25,7 @@ export default function SettingsPage() {
   const [customSurface, setCustomSurface] = useState<string>("");
   const [customName, setCustomName] = useState("");
   const [savedThemes, setSavedThemes] = useState<Array<{ name: string; text: string; bg: string; surface: string }>>([]);
+  const [hideBoxCode, setHideBoxCode] = useState<boolean>(typeof window !== "undefined" ? localStorage.getItem("hideBoxCode") === "1" : false);
 
   useEffect(() => {
     // reflect current stored theme on mount
@@ -53,6 +54,11 @@ export default function SettingsPage() {
           setSavedThemes(JSON.parse(raw));
         } catch {}
       }
+    }
+
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("hideBoxCode") === "1";
+      setHideBoxCode(stored);
     }
   }, []);
 
@@ -328,7 +334,23 @@ export default function SettingsPage() {
             <section style={{ marginTop: 18 }}>
               <h2 style={{ margin: "0 0 8px 0" }}>Formats</h2>
               <div style={{ background: "var(--surface)", border: "1px solid var(--border)", padding: 12, borderRadius: 14 }}>
-                Format options will live here (label print presets, default copies, etc.).
+                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={hideBoxCode}
+                    onChange={(e) => {
+                      const next = e.target.checked;
+                      setHideBoxCode(next);
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("hideBoxCode", next ? "1" : "0");
+                      }
+                    }}
+                  />
+                  <span>Hide box code on box pages</span>
+                </label>
+                <div style={{ marginTop: 8, opacity: 0.75, fontSize: 13 }}>
+                  When enabled, the box code won’t be shown on the items page.
+                </div>
               </div>
             </section>
           </>
