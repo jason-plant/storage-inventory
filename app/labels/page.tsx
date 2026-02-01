@@ -175,10 +175,52 @@ export default function LabelsPage() {
     if (selected.length === 0) return;
     try {
       const files: File[] = [];
+      const html2canvas = (await import("html2canvas")).default;
+
+      let pxWidth = 480;
+      let pxHeight = 360;
+      if (printLayout === "50x80") {
+        pxWidth = 600;
+        pxHeight = 960;
+      } else if (printLayout === "40x30") {
+        pxWidth = 480;
+        pxHeight = 360;
+      }
+
       for (const code of selected) {
-        const data = qrMap[code];
-        if (!data) continue;
-        const res = await fetch(data);
+        const b = boxes.find((bb) => bb.code === code);
+        const qr = qrMap[code] || "";
+        if (!b || !qr) continue;
+
+        const el = document.createElement("div");
+        el.style.width = pxWidth + "px";
+        el.style.height = pxHeight + "px";
+        el.style.padding = "16px";
+        el.style.boxSizing = "border-box";
+        el.style.border = "1px solid #000";
+        el.style.background = "#fff";
+        el.style.fontFamily = "Arial, sans-serif";
+
+        const codeSize = printLayout === "50x80" ? 64 : 36;
+        const nameSize = printLayout === "50x80" ? 20 : 14;
+        const locSize = printLayout === "50x80" ? 16 : 12;
+
+        el.innerHTML = `
+          <div style="font-weight:900;font-size:${codeSize}px;text-align:center;width:100%">${code}</div>
+          ${b.name ? `<div style=\"text-align:center;font-size:${nameSize}px;margin-top:6px\">${b.name}</div>` : ""}
+          ${b.location ? `<div style=\"text-align:center;font-size:${locSize}px;margin-top:4px;opacity:0.85\">${b.location}</div>` : ""}
+          <img src="${qr}" style="width:70%;display:block;margin:10px auto 0" />
+        `;
+
+        el.style.position = "absolute";
+        el.style.left = "-9999px";
+        document.body.appendChild(el);
+
+        const canvas = await html2canvas(el, { scale: 2 });
+        const dataUrl = canvas.toDataURL("image/png");
+        document.body.removeChild(el);
+
+        const res = await fetch(dataUrl);
         const blob = await res.blob();
         files.push(new File([blob], `${code}.png`, { type: blob.type }));
       }
