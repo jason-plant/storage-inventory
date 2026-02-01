@@ -1448,9 +1448,6 @@ export default function BoxPage() {
               </button>
             </div>
           </Modal>
-
-
-    return (
         </main>
       )}
     </RequireAuth>
