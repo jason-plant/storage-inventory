@@ -63,7 +63,7 @@ export default function BoxPage() {
 
 
 
-  // ...all state and variable declarations above...
+  // ...ll state and variable declarations above...
 
 
   const params = useParams<{ code?: string }>();
@@ -1391,61 +1391,9 @@ export default function BoxPage() {
             </div>
           </Modal>
 
-          {/* Delete modal */}
-          <Modal
-            open={confirmDeleteOpen}
-            title="Delete item?"
-            onClose={() => {
-              if (busy) return;
-              setConfirmDeleteOpen(false);
-              deleteItemRef.current = null;
-            }}
-          >
-            <p style={{ marginTop: 0 }}>
-              {deleteReasonRef.current === "qty0" ? (
-                <>
-                  Quantity is 0. Delete <strong>{deleteItemRef.current?.name ?? "this item"}</strong> (and remove photo)?
-                </>
-              ) : (
-                <>
-                  Delete <strong>{deleteItemRef.current?.name ?? "this item"}</strong> (and remove photo)?
-                </>
-              )}
-            </p>
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (busy) return;
-                  setConfirmDeleteOpen(false);
-                  deleteItemRef.current = null;
-                  if (box) reloadItems(box.id);
-                }}
-                disabled={busy}
-              >
-                Cancel
-              </button>
 
-              <button
-                type="button"
-                onClick={async () => {
-                  const item = deleteItemRef.current;
-                  if (!item) return;
-                  setConfirmDeleteOpen(false);
-                  deleteItemRef.current = null;
-                  await deleteItemAndPhoto(item);
-                }}
-                disabled={busy}
-                style={{ background: "#ef4444", color: "#fff" }}
-              >
-                {busy ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-          </Modal>
-
-          {/* Print / Bluetooth modal for single box */}
-          <Modal open={showPrintModal} title="Print label" onClose={() => setShowPrintModal(false)}>
+          {/* Print label modal and shareLabelImage function are both inside BoxPage */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -1463,33 +1411,34 @@ export default function BoxPage() {
                 </label>
               </div>
 
-                {/* Preview */}
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <div style={{ width: 160, border: "1px solid #000", padding: 8, borderRadius: 8, textAlign: "center" }}>
-                <div style={{ fontWeight: 900, fontSize: 26 }}>{box?.code ?? ""}</div>
-                <div style={{ marginTop: 6 }}>
-                  {previewQr ? (
-                    <img src={previewQr} alt="preview" style={{ width: "70%", display: "block", margin: "6px auto" }} />
-                  ) : (
-                    <div style={{ width: "70%", height: 80, background: "#f0f0f0", margin: "6px auto" }} />
-                  )}
+              {/* Preview */}
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <div style={{ width: 160, border: "1px solid #000", padding: 8, borderRadius: 8, textAlign: "center" }}>
+                  <div style={{ fontWeight: 900, fontSize: 26 }}>{box?.code ?? ""}</div>
+                  <div style={{ marginTop: 6 }}>
+                    {previewQr ? (
+                      <img src={previewQr} alt="preview" style={{ width: "70%", display: "block", margin: "6px auto" }} />
+                    ) : (
+                      <div style={{ width: "70%", height: 80, background: "#f0f0f0", margin: "6px auto" }} />
+                    )}
+                  </div>
+                  {box?.name && <div style={{ fontSize: 12 }}>{box.name}</div>}
                 </div>
-                {box?.name && <div style={{ fontSize: 12 }}>{box.name}</div>}
               </div>
-            </div>
 
-            <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button onClick={() => { setShowPrintModal(false); printSingle(); }} className="tap-btn">Print (system)</button>
                 <button onClick={() => { setShowPrintModal(false); exportSinglePDF(); }} className="tap-btn primary">Export PDF</button>
                 <button onClick={() => { setShowPrintModal(false); setShowBluetoothConfirm(true); }} className="tap-btn">Bluetooth print</button>
+                <button onClick={async () => { setShowPrintModal(false); await shareLabelImage(); }} className="tap-btn">Share label</button>
                 <button onClick={() => setShowPrintModal(false)} className="tap-btn">Cancel</button>
               </div>
 
               <div style={{ fontSize: 13, opacity: 0.85 }}>
-                You can print to your printer via the system dialog, export a PDF, or use experimental Bluetooth printing. Bluetooth support varies by device.
+                You can print to your printer via the system dialog, export a PDF, share the label image, or use experimental Bluetooth printing. Bluetooth support varies by device.
               </div>
             </div>
-          </Modal>
+
 
           <Modal open={showBluetoothConfirm} title="Bluetooth printing" onClose={() => setShowBluetoothConfirm(false)}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1503,10 +1452,69 @@ export default function BoxPage() {
             </div>
           </Modal>
 
+
+
+
+
+
+    return (
         </main>
       )}
     </RequireAuth>
   );
+
+  // Web Share API: Share label image (PNG)
+  async function shareLabelImage() {
+    if (!box) return;
+    if (!navigator.canShare || !navigator.share) {
+      alert("Web Share API is not supported on this device/browser.");
+      return;
+    }
+    try {
+      // Create offscreen element for label
+      let pageW = 210; // mm (A4)
+      let pageH = 297;
+      if (printLayout === "40x30") {
+        pageW = 40;
+        pageH = 30;
+      } else if (printLayout === "50x80") {
+        pageW = 50;
+        pageH = 80;
+      }
+      // Use px for offscreen rendering
+      const pxW = 320;
+      const pxH = Math.round((pageH / pageW) * 320);
+      const el = document.createElement("div");
+      el.style.width = pxW + "px";
+      el.style.height = pxH + "px";
+      el.style.padding = "8px";
+      el.style.boxSizing = "border-box";
+      el.style.border = "1px solid #000";
+      el.style.background = "#fff";
+      el.innerHTML = `<div style='font-weight:900;font-size:26px;text-align:center;width:100%'>${box.code}</div>${box.name ? `<div style='text-align:center;font-size:12px;margin-top:6px'>${box.name}</div>` : ""}${box.location ? `<div style='text-align:center;font-size:11px;margin-top:4px'>${box.location}</div>` : ""}<img src='${await QRCode.toDataURL(`${window.location.origin}/box/${encodeURIComponent(box.code)}`, { width: 320, margin: 1 })}' style='width:70%;display:block;margin:6px auto' />`;
+      el.style.position = "absolute";
+      el.style.left = "-9999px";
+      document.body.appendChild(el);
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(el, { scale: 2 });
+      const dataUrl = canvas.toDataURL("image/png");
+      document.body.removeChild(el);
+      // Convert dataURL to Blob
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `label-${box.code}.png`, { type: "image/png" });
+      if (!navigator.canShare({ files: [file] })) {
+        alert("Sharing files is not supported on this device/browser.");
+        return;
+      }
+      await navigator.share({
+        files: [file],
+        title: `Label for ${box.code}`,
+        text: box.name ? `Label for ${box.code}: ${box.name}` : `Label for ${box.code}`,
+      });
+    } catch (err) {
+      alert("Failed to share label: " + ((err as any)?.message || err));
+    }
+  }
 }
 
-/* Local modal replaced by shared `Modal` component in `app/components/Modal.tsx` */
