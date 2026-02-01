@@ -12,11 +12,11 @@ export default function HelpButton() {
     if (pathname === "/" || pathname === "/locations")
       return { title: "Locations", content: (
         <>
-          <p>Overview of locations and how to manage them.</p>
+          <p>Start here to organize where your boxes live.</p>
           <ul>
-            <li>Create a new location with <strong>New</strong>.</li>
-            <li>Edit or delete a location using the edit/delete buttons.</li>
-            <li>Click a location to view its boxes and manage them.</li>
+            <li>Tap <strong>New</strong> to add a location (e.g., Garage, Closet).</li>
+            <li>Use the edit/delete icons on a location card to rename or remove it.</li>
+            <li>Select a location card to view and manage its boxes.</li>
           </ul>
         </>
       ) };
@@ -24,11 +24,11 @@ export default function HelpButton() {
     if (pathname.startsWith("/locations/"))
       return { title: "Location", content: (
         <>
-          <p>Manage boxes within this location.</p>
+          <p>Manage all boxes stored in this location.</p>
           <ul>
-            <li>Add new boxes using <strong>New</strong>.</li>
-            <li>Select boxes to move or bulk actions.</li>
-            <li>Use the edit/delete buttons on each box card to manage details.</li>
+            <li>Tap <strong>New</strong> to create a box in this location.</li>
+            <li>Use edit/delete icons on a box card to rename or remove it.</li>
+            <li>Select a box card to open it and manage its items.</li>
           </ul>
         </>
       ) };
@@ -36,11 +36,11 @@ export default function HelpButton() {
     if (pathname.startsWith("/boxes"))
       return { title: "Boxes", content: (
         <>
-          <p>Box list and quick actions.</p>
+          <p>Browse and manage all boxes across locations.</p>
           <ul>
-            <li>Open a box to view its items and edit details.</li>
-            <li>Use Edit/Delete buttons on each card to change the box.</li>
-            <li>Use the New button to create a box.</li>
+            <li>Tap a box to open it and see items inside.</li>
+            <li>Use the edit/delete icons on a box card to update details.</li>
+            <li>Tap <strong>New</strong> to create a box and assign a location.</li>
           </ul>
         </>
       ) };
@@ -48,11 +48,11 @@ export default function HelpButton() {
     if (pathname.startsWith("/box/"))
       return { title: "Box", content: (
         <>
-          <p>Inside a box: view and manage items.</p>
+          <p>Manage items stored in this box.</p>
           <ul>
-            <li>Tap an item to edit; add photos, quantity and descriptions.</li>
-            <li>Use the Edit / Delete buttons for items and the box itself.</li>
-            <li>Use the camera button on item edit to take photos or choose files.</li>
+            <li>Tap an item to edit its name, quantity, description, or photo.</li>
+            <li>Use the + button to add a new item to this box.</li>
+            <li>Use Edit/Delete on items, or edit the box details as needed.</li>
           </ul>
         </>
       ) };
@@ -60,11 +60,11 @@ export default function HelpButton() {
     if (pathname.startsWith("/labels"))
       return { title: "Labels", content: (
         <>
-          <p>Print or share QR labels for boxes.</p>
+          <p>Create, print, or share QR labels for your boxes.</p>
           <ul>
-            <li>Long-press a label to select multiple.</li>
-            <li>Choose a layout (Default, 40×30 mm, 50×80 mm) and copies.</li>
-            <li>Print via system dialog, Export PDF, or try the experimental Bluetooth print.</li>
+            <li>Long-press a label to select multiple boxes.</li>
+            <li>Pick a layout (Default, 40×30 mm, 50×80 mm) and number of copies.</li>
+            <li>Print, export PDF, share images, or try Bluetooth printing (device support varies).</li>
           </ul>
         </>
       ) };
@@ -72,10 +72,11 @@ export default function HelpButton() {
     if (pathname.startsWith("/scan-item") || pathname.startsWith("/scan"))
       return { title: "Scan", content: (
         <>
-          <p>Scan barcodes or QR codes to find a box or item.</p>
+          <p>Scan a barcode or QR code to jump to a box or item.</p>
           <ul>
-            <li>Use the scanner to quickly open the related box/item page.</li>
-            <li>Ensure camera permission is allowed for scanning to work.</li>
+            <li>Allow camera access when prompted.</li>
+            <li>Hold the code steady in the frame for quick detection.</li>
+            <li>Results open the matching box or item automatically.</li>
           </ul>
         </>
       ) };
@@ -83,10 +84,11 @@ export default function HelpButton() {
     if (pathname.startsWith("/search"))
       return { title: "Search", content: (
         <>
-          <p>Search for boxes and items by code or name.</p>
+          <p>Find boxes or items quickly across your inventory.</p>
           <ul>
-            <li>Type a code or name and press Enter to view results.</li>
-            <li>Click a result to open the box or item.</li>
+            <li>Type a box code, box name, location, or item name to search.</li>
+            <li>Select a result to open the box or item details.</li>
+            <li>Use edit actions from results to update items fast.</li>
           </ul>
         </>
       ) };
@@ -94,20 +96,22 @@ export default function HelpButton() {
     if (pathname.startsWith("/login") || pathname.startsWith("/signup"))
       return { title: "Account", content: (
         <>
-          <p>Sign in or create an account to access the app.</p>
+          <p>Sign in to access your inventory from any device.</p>
           <ul>
-            <li>Use your credentials to sign in.</li>
-            <li>Signup requires an email and password.</li>
+            <li>Use your email and password to log in.</li>
+            <li>Create a new account with a valid email address.</li>
+            <li>Reset your password if you can’t sign in.</li>
           </ul>
         </>
       ) };
 
     return { title: "Storage Inventory", content: (
       <>
-        <p>General app help.</p>
+        <p>Get around and manage your storage quickly.</p>
         <ul>
-          <li>Navigate with the menu in the top-right.</li>
-          <li>Use the search to quickly find boxes or items.</li>
+          <li>Use the menu in the top-right to navigate to key pages.</li>
+          <li>Search to jump directly to a box or item.</li>
+          <li>Use labels and scan to connect physical storage to the app.</li>
         </ul>
       </>
     ) };
