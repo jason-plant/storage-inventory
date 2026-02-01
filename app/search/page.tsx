@@ -5,6 +5,7 @@ import EditIconButton from "../components/EditIconButton";
 import EditItemModal from "./EditItemModal";
 import { DeleteItemButton } from "./DeleteItemButton";
 import { supabase } from "../lib/supabaseClient";
+import { DEFAULT_MAX_UPLOAD_BYTES, DEFAULT_MAX_UPLOAD_MB } from "../../lib/image";
 import RequireAuth from "../components/RequireAuth";
 
 type SearchItem = {
@@ -228,12 +229,33 @@ export default function SearchPage() {
                               }
                               // Upload new photo if present
                               if (updated.photoFile && userId) {
-                                const safeName = updated.photoFile.name.replace(/[^\w.\-]+/g, "_");
+                                let fileToUpload = updated.photoFile;
+
+                                try {
+                                  const { compressImageToTarget } = await import("../../lib/image");
+                                  const compressed = await compressImageToTarget(updated.photoFile, {
+                                    maxSize: 1280,
+                                    quality: 0.8,
+                                    targetBytes: DEFAULT_MAX_UPLOAD_BYTES,
+                                  });
+
+                                  if (compressed.size < updated.photoFile.size) fileToUpload = compressed;
+                                } catch {
+                                  // If compression fails, fall back to the original file
+                                }
+
+                                if (fileToUpload.size > DEFAULT_MAX_UPLOAD_BYTES) {
+                                  setError(`Photo is too large. Max ${DEFAULT_MAX_UPLOAD_MB} MB.`);
+                                  setLoading(false);
+                                  return;
+                                }
+
+                                const safeName = fileToUpload.name.replace(/[^\w.\-]+/g, "_");
                                 const path = `${userId}/${updated.id}/${Date.now()}-${safeName}`;
-                                const uploadRes = await supabase.storage.from("item-photos").upload(path, updated.photoFile, {
+                                const uploadRes = await supabase.storage.from("item-photos").upload(path, fileToUpload, {
                                   cacheControl: "3600",
                                   upsert: false,
-                                  contentType: updated.photoFile.type || "image/jpeg",
+                                  contentType: fileToUpload.type || "image/jpeg",
                                 });
                                 if (!uploadRes.error) {
                                   const pub = supabase.storage.from("item-photos").getPublicUrl(path);

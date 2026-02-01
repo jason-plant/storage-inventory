@@ -8,6 +8,9 @@
  * imported at runtime inside `compressImage` so it's only loaded in the browser.
  */
 
+export const DEFAULT_MAX_UPLOAD_MB = 0.5;
+export const DEFAULT_MAX_UPLOAD_BYTES = Math.round(DEFAULT_MAX_UPLOAD_MB * 1024 * 1024);
+
 export async function supportsWebP() {
   if (typeof window === "undefined") return false;
   try {
@@ -24,6 +27,13 @@ export type CompressOptions = {
   quality?: number; // 0-1 (default 0.8)
   mimeType?: string | null; // override mime type (if null, auto-detect)
   maxSizeMB?: number | null; // optional: max target size in MB (browser-image-compression uses this)
+};
+
+export type TargetCompressOptions = CompressOptions & {
+  targetBytes: number; // desired max output size in bytes
+  minQuality?: number; // lower bound for quality (default 0.5)
+  maxIterations?: number; // maximum compression attempts (default 6)
+  minMaxSize?: number; // lower bound for maxSize (default 640)
 };
 
 export async function compressImage(file: File, opts: CompressOptions = {}): Promise<File> {
@@ -57,5 +67,52 @@ export async function compressImage(file: File, opts: CompressOptions = {}): Pro
   const ext = fileType === "image/webp" ? "webp" : fileType.includes("png") ? "png" : "jpg";
   const newName = file.name.replace(/\.[^.]+$/, `.${ext}`);
   return new File([compressed], newName, { type: fileType });
+}
+
+/**
+ * Attempt to compress to a target byte size by iteratively reducing quality and size.
+ * This is best-effort and may still exceed the target for some images.
+ */
+export async function compressImageToTarget(file: File, opts: TargetCompressOptions): Promise<File> {
+  const {
+    targetBytes,
+    maxSize = 1280,
+    quality = 0.8,
+    mimeType = null,
+    minQuality = 0.5,
+    maxIterations = 6,
+    minMaxSize = 640,
+  } = opts;
+
+  const targetMB = targetBytes / (1024 * 1024);
+
+  let currentMaxSize = maxSize;
+  let currentQuality = quality;
+
+  let best = await compressImage(file, {
+    maxSize: currentMaxSize,
+    quality: currentQuality,
+    mimeType,
+    maxSizeMB: targetMB,
+  });
+
+  if (best.size <= targetBytes) return best;
+
+  for (let i = 1; i < maxIterations; i++) {
+    currentQuality = Math.max(minQuality, Number((currentQuality - 0.1).toFixed(2)));
+    currentMaxSize = Math.max(minMaxSize, Math.round(currentMaxSize * 0.85));
+
+    const next = await compressImage(file, {
+      maxSize: currentMaxSize,
+      quality: currentQuality,
+      mimeType,
+      maxSizeMB: targetMB,
+    });
+
+    if (next.size < best.size) best = next;
+    if (next.size <= targetBytes) return next;
+  }
+
+  return best;
 }
 

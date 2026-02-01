@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import QRCode from "qrcode";
 import { supabase } from "../../lib/supabaseClient";
+import { DEFAULT_MAX_UPLOAD_BYTES, DEFAULT_MAX_UPLOAD_MB } from "../../../lib/image";
 import RequireAuth from "../../components/RequireAuth";
 import Modal from "../../components/Modal";
 import EditIconButton from "../../components/EditIconButton";
@@ -401,27 +402,48 @@ export default function BoxPage() {
 
     // Replace with new photo (either camera or file picker)
     if (editNewPhoto) {
-      // delete old if present
-      if (oldPhotoUrl) {
-        const oldPath = getStoragePathFromPublicUrl(oldPhotoUrl);
-        if (oldPath) {
-          await supabase.storage.from("item-photos").remove([oldPath]);
-        }
+      let fileToUpload = editNewPhoto;
+
+      try {
+        const { compressImageToTarget } = await import("../../../lib/image");
+        const compressed = await compressImageToTarget(editNewPhoto, {
+          maxSize: 1280,
+          quality: 0.8,
+          targetBytes: DEFAULT_MAX_UPLOAD_BYTES,
+        });
+
+        if (compressed.size < editNewPhoto.size) fileToUpload = compressed;
+      } catch {
+        // If compression fails, fall back to the original file
       }
 
-      const safeName = editNewPhoto.name.replace(/[^\w.\-]+/g, "_");
+      if (fileToUpload.size > DEFAULT_MAX_UPLOAD_BYTES) {
+        setError(`Photo is too large. Max ${DEFAULT_MAX_UPLOAD_MB} MB.`);
+        setBusy(false);
+        return;
+      }
+
+      const safeName = fileToUpload.name.replace(/[^\w.\-]+/g, "_");
       const path = `${userId}/${it.id}/${Date.now()}-${safeName}`;
 
-      const uploadRes = await supabase.storage.from("item-photos").upload(path, editNewPhoto, {
+      const uploadRes = await supabase.storage.from("item-photos").upload(path, fileToUpload, {
         cacheControl: "3600",
         upsert: false,
-        contentType: editNewPhoto.type || "image/jpeg",
+        contentType: fileToUpload.type || "image/jpeg",
       });
 
       if (uploadRes.error) {
         setError(uploadRes.error.message);
         setBusy(false);
         return;
+      }
+
+      // delete old if present (best effort)
+      if (oldPhotoUrl) {
+        const oldPath = getStoragePathFromPublicUrl(oldPhotoUrl);
+        if (oldPath) {
+          await supabase.storage.from("item-photos").remove([oldPath]);
+        }
       }
 
       const pub = supabase.storage.from("item-photos").getPublicUrl(path);

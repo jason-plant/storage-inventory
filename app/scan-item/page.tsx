@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import RequireAuth from "../components/RequireAuth";
 import { useUnsavedChanges } from "../components/UnsavedChangesProvider";
 import { supabase } from "../lib/supabaseClient";
+import { DEFAULT_MAX_UPLOAD_BYTES, DEFAULT_MAX_UPLOAD_MB } from "../../lib/image";
 
 type BoxRow = {
   id: string;
@@ -253,11 +254,22 @@ function ScanItemInner() {
     let uploadRes: any = null;
 
     try {
-      const { compressImage } = await import("../../lib/image");
-      const compressed = await compressImage(capturedFile, { maxSize: 1280, quality: 0.8 });
+      const { compressImageToTarget } = await import("../../lib/image");
+      const compressed = await compressImageToTarget(capturedFile, {
+        maxSize: 1280,
+        quality: 0.8,
+        targetBytes: DEFAULT_MAX_UPLOAD_BYTES,
+      });
 
       // Use compressed image only if it gives a size reduction
       const fileToUpload = compressed.size < capturedFile.size ? compressed : capturedFile;
+
+      if (fileToUpload.size > DEFAULT_MAX_UPLOAD_BYTES) {
+        await supabase.from("items").delete().eq("owner_id", userId).eq("id", itemId);
+        setError(`Photo is too large. Max ${DEFAULT_MAX_UPLOAD_MB} MB.`);
+        setBusy(false);
+        return;
+      }
 
       uploadRes = await supabase.storage
         .from("item-photos")
@@ -276,6 +288,13 @@ function ScanItemInner() {
       }
     } catch (e: any) {
       // If compression fails, fall back to uploading the original file
+      if (capturedFile.size > DEFAULT_MAX_UPLOAD_BYTES) {
+        await supabase.from("items").delete().eq("owner_id", userId).eq("id", itemId);
+        setError(`Photo is too large. Max ${DEFAULT_MAX_UPLOAD_MB} MB.`);
+        setBusy(false);
+        return;
+      }
+
       uploadRes = await supabase.storage
         .from("item-photos")
         .upload(path, capturedFile, {

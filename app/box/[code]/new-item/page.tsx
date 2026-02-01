@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase } from "../../../lib/supabaseClient";
+import { DEFAULT_MAX_UPLOAD_BYTES, DEFAULT_MAX_UPLOAD_MB } from "../../../../lib/image";
 import RequireAuth from "../../../components/RequireAuth";
 import { useUnsavedChanges } from "../../../components/UnsavedChangesProvider";
 
@@ -80,7 +81,28 @@ export default function NewItemPage() {
 
     // 3️⃣ Upload photo if provided
     if (photoFile) {
-      const ext = (photoFile.name.split(".").pop() || "jpg").toLowerCase();
+      let fileToUpload = photoFile;
+
+      try {
+        const { compressImageToTarget } = await import("../../../../lib/image");
+        const compressed = await compressImageToTarget(photoFile, {
+          maxSize: 1280,
+          quality: 0.8,
+          targetBytes: DEFAULT_MAX_UPLOAD_BYTES,
+        });
+
+        if (compressed.size < photoFile.size) fileToUpload = compressed;
+      } catch {
+        // If compression fails, fall back to the original file
+      }
+
+      if (fileToUpload.size > DEFAULT_MAX_UPLOAD_BYTES) {
+        setError(`Photo is too large. Max ${DEFAULT_MAX_UPLOAD_MB} MB.`);
+        setBusy(false);
+        return;
+      }
+
+      const ext = (fileToUpload.name.split(".").pop() || "jpg").toLowerCase();
 
       // ✅ store inside a folder for THIS user
       // example: 123e4567.../itemId-1700000000000.jpg
@@ -88,7 +110,11 @@ export default function NewItemPage() {
 
       const upload = await supabase.storage
         .from("item-photos")
-        .upload(fileName, photoFile, { upsert: true });
+        .upload(fileName, fileToUpload, {
+          upsert: true,
+          cacheControl: "3600",
+          contentType: fileToUpload.type || "image/jpeg",
+        });
 
       if (upload.error) {
         setError(upload.error.message);
