@@ -24,6 +24,13 @@ function parseBoxNumber(code: string): number | null {
   return Number.isFinite(num) ? num : null;
 }
 
+function generateId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 export default function NewBoxPage() {
   return (
     <RequireAuth>
@@ -188,6 +195,7 @@ function NewBoxInner() {
 
     const insertRes = await supabase.from("boxes").insert([
       {
+        id: generateId(),
         owner_id: userId,
         code: code.toUpperCase(),
         name: name.trim() || null,

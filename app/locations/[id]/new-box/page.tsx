@@ -24,6 +24,13 @@ function parseBoxNumber(code: string): number | null {
   return Number.isFinite(num) ? num : null;
 }
 
+function generateId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 export default function NewBoxInLocationPage() {
   const params = useParams<{ id?: string }>();
   const locationId = params?.id ? decodeURIComponent(String(params.id)) : "";
@@ -108,6 +115,7 @@ export default function NewBoxInLocationPage() {
     const insertRes = await supabase
       .from("boxes")
       .insert({
+        id: generateId(),
         owner_id: userId,
         code: nextAutoCode, // hidden from user
         name: trimmed,

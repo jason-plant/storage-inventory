@@ -45,6 +45,12 @@ function parseBoxNumber(code: string): number | null {
   const num = Number(m[1]);
   return Number.isFinite(num) ? num : null;
 }
+function generateId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 function getStoragePathFromPublicUrl(url: string) {
   const marker = "/item-photos/";
   const idx = url.indexOf(marker);
@@ -591,6 +597,7 @@ export default function BoxPage() {
     const insertRes = await supabase
       .from("boxes")
       .insert({
+        id: generateId(),
         owner_id: userId,
         code: nextAutoCode,
         name: name.trim(),
