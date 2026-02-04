@@ -118,7 +118,7 @@ function NewBoxInner() {
       .order("name");
 
     if (ownedRes.error) {
-      setError((prev) => prev ?? ownedRes.error?.message || "Failed to load projects.");
+      setError((prev) => prev ?? (ownedRes.error?.message ?? "Failed to load projects."));
     }
 
     const memberRes = await supabase
@@ -127,7 +127,7 @@ function NewBoxInner() {
       .eq("user_id", userId);
 
     if (memberRes.error) {
-      setError((prev) => prev ?? memberRes.error?.message || "Failed to load project members.");
+      setError((prev) => prev ?? (memberRes.error?.message ?? "Failed to load project members."));
     }
 
     const memberIds = (memberRes.data ?? []).map((m) => m.project_id as string);

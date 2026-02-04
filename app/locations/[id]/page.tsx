@@ -444,6 +444,7 @@ function LocationInner() {
     }
 
     const delBoxRes = await supabase
+      .from("boxes")
       .delete()
       .eq("id", b.id);
 
@@ -460,6 +461,7 @@ function LocationInner() {
   }
 
   if (loading) {
+    return (
       <main style={{ padding: 16 }}>
         <p>Loading…</p>
       </main>
@@ -468,6 +470,7 @@ function LocationInner() {
 
   if (!location) {
     return (
+      <main style={{ padding: 16 }}>
         <p style={{ color: "crimson" }}>{error ?? "Building not found."}</p>
       </main>
     );
@@ -525,6 +528,7 @@ function LocationInner() {
       <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
         {boxes.map((b) => {
           const isSelected = selectedIds.has(b.id);
+          const totalQty = (b.items ?? []).reduce((sum, it) => sum + (it.quantity ?? 0), 0);
 
           return (
             <a
