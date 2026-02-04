@@ -106,7 +106,6 @@ function ScanItemInner() {
         location:locations ( name, project_id )
       `
       )
-      .eq("owner_id", userId)
       .order("code");
 
     if (res.error) {
@@ -310,7 +309,7 @@ function ScanItemInner() {
       const fileToUpload = compressed.size < capturedFile.size ? compressed : capturedFile;
 
       if (fileToUpload.size > DEFAULT_MAX_UPLOAD_BYTES) {
-        await supabase.from("items").delete().eq("owner_id", userId).eq("id", itemId);
+        await supabase.from("items").delete().eq("id", itemId);
         setError(`Photo is too large. Max ${DEFAULT_MAX_UPLOAD_MB} MB.`);
         setBusy(false);
         return;
@@ -326,7 +325,7 @@ function ScanItemInner() {
 
       if (uploadRes.error) {
         // rollback item if upload fails (best effort)
-        await supabase.from("items").delete().eq("owner_id", userId).eq("id", itemId);
+        await supabase.from("items").delete().eq("id", itemId);
         setError(uploadRes.error.message);
         setBusy(false);
         return;
@@ -334,7 +333,7 @@ function ScanItemInner() {
     } catch (e: any) {
       // If compression fails, fall back to uploading the original file
       if (capturedFile.size > DEFAULT_MAX_UPLOAD_BYTES) {
-        await supabase.from("items").delete().eq("owner_id", userId).eq("id", itemId);
+        await supabase.from("items").delete().eq("id", itemId);
         setError(`Photo is too large. Max ${DEFAULT_MAX_UPLOAD_MB} MB.`);
         setBusy(false);
         return;
@@ -349,7 +348,7 @@ function ScanItemInner() {
         });
 
       if (uploadRes.error) {
-        await supabase.from("items").delete().eq("owner_id", userId).eq("id", itemId);
+        await supabase.from("items").delete().eq("id", itemId);
         setError(uploadRes.error.message);
         setBusy(false);
         return;
@@ -358,7 +357,7 @@ function ScanItemInner() {
 
     if (uploadRes?.error) {
       // rollback item if upload fails (best effort)
-      await supabase.from("items").delete().eq("owner_id", userId).eq("id", itemId);
+      await supabase.from("items").delete().eq("id", itemId);
       setError(uploadRes.error.message);
       setBusy(false);
       return;
@@ -371,7 +370,6 @@ function ScanItemInner() {
     const updateRes = await supabase
       .from("items")
       .update({ photo_url: photoUrl })
-      .eq("owner_id", userId)
       .eq("id", itemId);
 
     if (updateRes.error) {

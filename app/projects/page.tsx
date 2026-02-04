@@ -11,6 +11,7 @@ import DeleteIconButton from "../components/DeleteIconButton";
 type ProjectRow = {
   id: string;
   name: string;
+  owner_id?: string | null;
   locations?: { count: number }[];
 };
 
@@ -30,6 +31,14 @@ function ProjectsInner() {
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [newName, setNewName] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+
+  // members modal
+  const [membersOpen, setMembersOpen] = useState(false);
+  const membersProjectRef = useRef<ProjectRow | null>(null);
+  const [members, setMembers] = useState<{ user_id: string; role: string; created_at: string }[]>([]);
+  const [membersBusy, setMembersBusy] = useState(false);
+  const [newMemberId, setNewMemberId] = useState("");
 
   // edit modal
   const [editOpen, setEditOpen] = useState(false);
@@ -57,6 +66,8 @@ function ProjectsInner() {
     const { data: authData, error: authErr } = await supabase.auth.getUser();
     const userId = authData.user?.id;
 
+    setCurrentUserId(userId || "");
+
     if (authErr || !userId) {
       setError(authErr?.message || "Not logged in.");
       setProjects([]);
@@ -64,15 +75,50 @@ function ProjectsInner() {
       return;
     }
 
+    const ownedRes = await supabase
+      .from("projects")
+      .select("id,name,owner_id, locations(count)")
+      .eq("owner_id", userId)
+      .order("name");
+
+    if (ownedRes.error) {
+      setError(ownedRes.error.message);
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
+
+    const memberRes = await supabase
+      .from("project_members")
+      .select("project_id")
+      .eq("user_id", userId);
+
+    if (memberRes.error) {
+      setError(memberRes.error.message);
+      setProjects((ownedRes.data ?? []) as ProjectRow[]);
+      setLoading(false);
+      return;
+    }
+
+    const memberIds = (memberRes.data ?? []).map((m) => m.project_id as string);
+    const owned = (ownedRes.data ?? []) as ProjectRow[];
+    const allIds = Array.from(new Set([...owned.map((p) => p.id), ...memberIds]));
+
+    if (allIds.length === 0) {
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
+
     const res = await supabase
       .from("projects")
-      .select("id,name, locations(count)")
-      .eq("owner_id", userId)
+      .select("id,name,owner_id, locations(count)")
+      .in("id", allIds)
       .order("name");
 
     if (res.error) {
       setError(res.error.message);
-      setProjects([]);
+      setProjects(owned);
     } else {
       setProjects((res.data ?? []) as ProjectRow[]);
     }
@@ -154,9 +200,8 @@ function ProjectsInner() {
     const res = await supabase
       .from("projects")
       .update({ name: trimmed })
-      .eq("owner_id", userId)
       .eq("id", p.id)
-      .select("id,name")
+      .select("id,name,owner_id")
       .single();
 
     if (res.error || !res.data) {
@@ -191,7 +236,6 @@ function ProjectsInner() {
     const locRes = await supabase
       .from("locations")
       .select("id", { count: "exact", head: true })
-      .eq("owner_id", userId)
       .eq("project_id", p.id);
 
     if (locRes.error) {
@@ -237,6 +281,79 @@ function ProjectsInner() {
       window.dispatchEvent(new Event("active-project-changed"));
     } catch {}
     router.push("/locations");
+  }
+
+  async function openMembers(p: ProjectRow) {
+    membersProjectRef.current = p;
+    setMembersOpen(true);
+    setMembersBusy(true);
+    setMembers([]);
+    setError(null);
+
+    const res = await supabase
+      .from("project_members")
+      .select("user_id, role, created_at")
+      .eq("project_id", p.id)
+      .order("created_at", { ascending: true });
+
+    if (res.error) {
+      setError(res.error.message);
+      setMembers([]);
+    } else {
+      setMembers((res.data ?? []) as any[]);
+    }
+
+    setMembersBusy(false);
+  }
+
+  async function addMember() {
+    const p = membersProjectRef.current;
+    if (!p) return;
+    const userId = newMemberId.trim();
+    if (!userId) return;
+
+    setMembersBusy(true);
+    setError(null);
+
+    const res = await supabase
+      .from("project_members")
+      .insert({ project_id: p.id, user_id: userId, role: "member" })
+      .select("user_id, role, created_at")
+      .single();
+
+    if (res.error || !res.data) {
+      setError(res.error?.message || "Failed to add member.");
+      setMembersBusy(false);
+      return;
+    }
+
+    setMembers((prev) => [...prev, res.data as any]);
+    setNewMemberId("");
+    setMembersBusy(false);
+  }
+
+  async function removeMember(userId: string) {
+    const p = membersProjectRef.current;
+    if (!p) return;
+    if (!userId) return;
+
+    setMembersBusy(true);
+    setError(null);
+
+    const res = await supabase
+      .from("project_members")
+      .delete()
+      .eq("project_id", p.id)
+      .eq("user_id", userId);
+
+    if (res.error) {
+      setError(res.error.message || "Failed to remove member.");
+      setMembersBusy(false);
+      return;
+    }
+
+    setMembers((prev) => prev.filter((m) => m.user_id !== userId));
+    setMembersBusy(false);
   }
 
   function startLongPress(p: ProjectRow) {
@@ -425,6 +542,7 @@ function ProjectsInner() {
       <div style={{ display: "grid", gap: 10 }}>
         {projects.map((p) => {
           const locationCount = p.locations?.[0]?.count ?? 0;
+          const isOwner = Boolean(currentUserId) && p.owner_id === currentUserId;
           return (
             <div
               key={p.id}
@@ -466,12 +584,25 @@ function ProjectsInner() {
               </div>
 
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <span onClick={(e) => e.stopPropagation()}>
-                  <EditIconButton onClick={() => openEdit(p)} title="Edit project" />
-                </span>
-                <span onClick={(e) => e.stopPropagation()}>
-                  <DeleteIconButton onClick={() => requestDelete(p)} title="Delete project" />
-                </span>
+                {isOwner && (
+                  <>
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="tap-btn"
+                        onClick={() => openMembers(p)}
+                      >
+                        Members
+                      </button>
+                    </span>
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <EditIconButton onClick={() => openEdit(p)} title="Edit project" />
+                    </span>
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <DeleteIconButton onClick={() => requestDelete(p)} title="Delete project" />
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           );
@@ -531,6 +662,60 @@ function ProjectsInner() {
         </p>
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <button className="tap-btn" onClick={() => setBlockedOpen(false)}>OK</button>
+        </div>
+      </Modal>
+
+      {/* Members modal */}
+      <Modal open={membersOpen} title="Project members" onClose={() => setMembersOpen(false)}>
+        <p style={{ marginTop: 0, opacity: 0.85 }}>
+          Add members by user ID (UUID). You can add emails later.
+        </p>
+
+        {error && <p style={{ color: "crimson", margin: 0 }}>Error: {error}</p>}
+
+        <div style={{ display: "grid", gap: 10 }}>
+          <label style={{ display: "grid", gap: 6 }}>
+            <span style={{ fontWeight: 800 }}>Add member (User ID)</span>
+            <input
+              value={newMemberId}
+              onChange={(e) => setNewMemberId(e.target.value)}
+              placeholder="UUID of user"
+              disabled={membersBusy}
+            />
+          </label>
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <button className="tap-btn" onClick={() => setMembersOpen(false)} disabled={membersBusy}>Close</button>
+            <button className="tap-btn primary" onClick={addMember} disabled={membersBusy || !newMemberId.trim()}>
+              {membersBusy ? "Saving…" : "Add"}
+            </button>
+          </div>
+
+          <div style={{ fontWeight: 800 }}>Members</div>
+          {membersBusy ? (
+            <div>Loading…</div>
+          ) : members.length === 0 ? (
+            <div style={{ opacity: 0.7 }}>No members yet.</div>
+          ) : (
+            <div style={{ display: "grid", gap: 8 }}>
+              {members.map((m) => (
+                <div key={m.user_id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <div style={{ display: "grid" }}>
+                    <span style={{ fontWeight: 700 }}>{m.user_id}</span>
+                    <span style={{ fontSize: 12, opacity: 0.7 }}>{m.role}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="tap-btn"
+                    onClick={() => removeMember(m.user_id)}
+                    disabled={membersBusy}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Modal>
     </main>

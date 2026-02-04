@@ -99,7 +99,7 @@ function BoxesInner() {
     }
 
     // Load locations
-    let locQuery = supabase.from("locations").select("id,name,project_id").eq("owner_id", userId);
+    let locQuery = supabase.from("locations").select("id,name,project_id");
     if (projectId === "__unassigned__") {
       locQuery = locQuery.is("project_id", null);
     } else if (projectId) {
@@ -266,7 +266,6 @@ function BoxesInner() {
     const res = await supabase
       .from("boxes")
       .update({ name: trimmed })
-      .eq("owner_id", userId)
       .eq("id", b.id)
       .select("id,name")
       .single();

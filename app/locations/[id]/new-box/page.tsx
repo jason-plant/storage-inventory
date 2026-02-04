@@ -61,7 +61,6 @@ export default function NewBoxInLocationPage() {
         .from("locations")
         .select("id, name")
         .eq("id", locationId)
-        .eq("owner_id", userId)
         .maybeSingle();
 
       if (!locRes.data || locRes.error) {
@@ -74,7 +73,6 @@ export default function NewBoxInLocationPage() {
       const boxesRes = await supabase
         .from("boxes")
         .select("id, code")
-        .eq("owner_id", userId)
         .order("code");
 
       setAllBoxes((boxesRes.data ?? []) as BoxMini[]);

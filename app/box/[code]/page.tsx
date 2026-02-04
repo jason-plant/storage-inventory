@@ -102,6 +102,7 @@ export default function BoxPage() {
   // Modals
   const [newBoxOpen, setNewBoxOpen] = useState(false);
   const [newBoxName, setNewBoxName] = useState("");
+  const [newBoxRoomNumber, setNewBoxRoomNumber] = useState("");
 
   // "Create new location" inside create box modal
   const [newLocOpen, setNewLocOpen] = useState(false);
@@ -184,7 +185,6 @@ export default function BoxPage() {
       const boxRes = await supabase
         .from("boxes")
         .select("id, code, name, location")
-        .eq("owner_id", userId)
         .eq("code", code)
         .maybeSingle();
 
@@ -204,7 +204,6 @@ export default function BoxPage() {
       const itemsRes = await supabase
         .from("items")
         .select("id, name, description, photo_url, quantity, condition")
-        .eq("owner_id", userId)
         .eq("box_id", boxRes.data.id)
         .order("name");
 
@@ -213,15 +212,13 @@ export default function BoxPage() {
       const boxesRes = await supabase
         .from("boxes")
         .select("id, code")
-        .eq("owner_id", userId)
         .order("code");
 
       setAllBoxes((boxesRes.data ?? []) as BoxMini[]);
 
       let locQuery = supabase
         .from("locations")
-        .select("id, name, project_id")
-        .eq("owner_id", userId);
+        .select("id, name, project_id");
 
       if (projectId === "__unassigned__") {
         locQuery = locQuery.is("project_id", null);
@@ -245,6 +242,7 @@ export default function BoxPage() {
       setConfirmMoveOpen(false);
       setConfirmDeleteOpen(false);
       setNewBoxName("");
+      setNewBoxRoomNumber("");
       setNewBoxLocationId("");
       setNewLocOpen(false);
       setNewLocName("");
@@ -284,7 +282,6 @@ export default function BoxPage() {
     const { data } = await supabase
       .from("items")
       .select("id, name, description, photo_url, quantity, condition")
-      .eq("owner_id", userId)
       .eq("box_id", boxId)
       .order("name");
 
@@ -314,7 +311,7 @@ export default function BoxPage() {
       return;
     }
 
-    const delRes = await supabase.from("items").delete().eq("owner_id", userId).eq("id", item.id);
+    const delRes = await supabase.from("items").delete().eq("id", item.id);
 
     if (delRes.error) {
       setError(delRes.error.message);
@@ -380,7 +377,7 @@ export default function BoxPage() {
       return;
     }
 
-    const res = await supabase.from("items").update({ quantity: safeQty }).eq("owner_id", userId).eq("id", itemId);
+    const res = await supabase.from("items").update({ quantity: safeQty }).eq("id", itemId);
 
     if (res.error) {
       setError(res.error.message);
@@ -541,7 +538,6 @@ export default function BoxPage() {
     const res = await supabase
       .from("items")
       .update(updatePayload)
-      .eq("owner_id", userId)
       .eq("id", it.id)
       .select("id, name, description, photo_url, quantity, condition")
       .single();
@@ -777,7 +773,7 @@ export default function BoxPage() {
     setBusy(false);
   }
 
-  async function createNewBoxFromMove(name: string) {
+  async function createNewBoxFromMove(name: string, roomNumber: string) {
     if (!name.trim()) {
       setError("Room name is required.");
       return null;
@@ -802,6 +798,7 @@ export default function BoxPage() {
         owner_id: userId,
         code: nextAutoCode,
         name: name.trim(),
+        room_number: roomNumber.trim() || null,
         location_id: newBoxLocationId || null,
       })
       .select("id, code")
@@ -829,6 +826,7 @@ export default function BoxPage() {
     if (value === "__new__") {
       setBulkDestBoxId("");
       setNewBoxName("");
+      setNewBoxRoomNumber("");
       setNewBoxLocationId("");
       setNewBoxOpen(true);
       return;
@@ -884,7 +882,6 @@ export default function BoxPage() {
     const res = await supabase
       .from("items")
       .update({ box_id: info.toId })
-      .eq("owner_id", userId)
       .in("id", info.itemIds);
 
     if (res.error) {
@@ -1472,6 +1469,103 @@ export default function BoxPage() {
               />
             </div>
           )}
+
+          <Modal
+            open={newBoxOpen}
+            title="Create room"
+            onClose={() => {
+              if (busy) return;
+              setNewBoxOpen(false);
+              setNewBoxName("");
+              setNewBoxRoomNumber("");
+            }}
+          >
+            <div style={{ display: "grid", gap: 10 }}>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 800 }}>Room name</span>
+                <input value={newBoxName} onChange={(e) => setNewBoxName(e.target.value)} placeholder="Room name" autoFocus />
+              </label>
+
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 800 }}>Room number</span>
+                <input value={newBoxRoomNumber} onChange={(e) => setNewBoxRoomNumber(e.target.value)} placeholder="e.g. 204" />
+              </label>
+
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 800 }}>Building</span>
+                <select
+                  value={newBoxLocationId}
+                  onChange={(e) => {
+                    if (e.target.value === "__new__") {
+                      setNewLocName("");
+                      setNewLocOpen(true);
+                      return;
+                    }
+                    setNewBoxLocationId(e.target.value);
+                  }}
+                >
+                  <option value="">Select building…</option>
+                  <option value="__new__">➕ Create new building…</option>
+                  {locations.map((l) => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              {error && <p style={{ color: "crimson", margin: 0 }}>Error: {error}</p>}
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button type="button" onClick={() => setNewBoxOpen(false)} disabled={busy}>Cancel</button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (busy) return;
+                    const created = await createNewBoxFromMove(newBoxName, newBoxRoomNumber);
+                    if (created) {
+                      setNewBoxOpen(false);
+                      setNewBoxName("");
+                      setNewBoxRoomNumber("");
+                    }
+                  }}
+                  disabled={busy || !newBoxName.trim()}
+                  style={{ background: "#111", color: "#fff" }}
+                >
+                  {busy ? "Saving…" : "Save room"}
+                </button>
+              </div>
+            </div>
+          </Modal>
+
+          <Modal
+            open={newLocOpen}
+            title="Create new building"
+            onClose={() => {
+              if (busy) return;
+              setNewLocOpen(false);
+              setNewLocName("");
+            }}
+          >
+            <p style={{ marginTop: 0, opacity: 0.85 }}>Add a new building without leaving this page.</p>
+            <input
+              placeholder="Building name"
+              value={newLocName}
+              onChange={(e) => setNewLocName(e.target.value)}
+              autoFocus
+              disabled={busy}
+            />
+            {error && <p style={{ color: "crimson", margin: 0 }}>Error: {error}</p>}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <button type="button" onClick={() => setNewLocOpen(false)} disabled={busy}>Cancel</button>
+              <button
+                type="button"
+                onClick={createLocationInlineForNewBox}
+                disabled={busy || !newLocName.trim()}
+                style={{ background: "#111", color: "#fff" }}
+              >
+                {busy ? "Creating…" : "Create building"}
+              </button>
+            </div>
+          </Modal>
 
           <Modal
             open={unitModalOpen}

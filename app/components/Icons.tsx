@@ -11,14 +11,16 @@ export const Icon = ({ children }: { children: React.ReactNode }) => (
 // SVG versions
 export const IconLocationsSVG = () => (
   <Icon>
-    <path d="M21 10c0 6-9 13-9 13S3 16 3 10a9 9 0 0118 0z" />
-    <circle cx="12" cy="10" r="3" />
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M7 21V7h10v14" />
+    <path d="M9 9h2M13 9h2M9 12h2M13 12h2M9 15h2M13 15h2" />
   </Icon>
 );
 export const IconBoxesSVG = () => (
   <Icon>
-    <path d="M21 16V8a2 2 0 00-1-1.73L13 3a2 2 0 00-2 0L4 6.27A2 2 0 003 8v8a2 2 0 001 1.73L11 21a2 2 0 002 0l7-3.27A2 2 0 0021 16z" />
-    <path d="M7 9l5 3 5-3" />
+    <path d="M7 21V3h10v18" />
+    <path d="M7 3h10" />
+    <circle cx="14" cy="12" r="1" />
   </Icon>
 );
 export const IconProjectsSVG = () => (
@@ -62,8 +64,8 @@ export const IconHomeSVG = () => (
 );
 
 // Emoji versions
-export const IconLocationsEmoji = () => <span role="img" aria-label="Locations">📍</span>;
-export const IconBoxesEmoji = () => <span role="img" aria-label="Boxes">📦</span>;
+export const IconLocationsEmoji = () => <span role="img" aria-label="Buildings">🏢</span>;
+export const IconBoxesEmoji = () => <span role="img" aria-label="Rooms">🚪</span>;
 export const IconProjectsEmoji = () => <span role="img" aria-label="Projects">🗂️</span>;
 export const IconSearchEmoji = () => <span role="img" aria-label="Search">🔍</span>;
 export const IconLabelsEmoji = () => <span role="img" aria-label="Labels">🏷️</span>;

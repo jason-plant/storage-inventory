@@ -69,10 +69,9 @@ function NewBoxInner() {
   const [roomNumber, setRoomNumber] = useState("");
 
   useEffect(() => {
-    const dirty = name.trim() !== "" || Boolean(locationId);
-    setDirty(dirty);
-  }, [name, locationId, setDirty]);
     const dirty = name.trim() !== "" || roomNumber.trim() !== "" || Boolean(locationId);
+    setDirty(dirty);
+  }, [name, roomNumber, locationId, setDirty]);
   useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = localStorage.getItem("activeProjectId") || "";
@@ -92,7 +91,6 @@ function NewBoxInner() {
     const userId = sessionData.session?.user?.id;
 
     if (sessionErr || !userId) {
-          room_number: roomNumber.trim() || null,
       setError(sessionErr?.message || "Not logged in.");
       setExistingCodes([]);
       setLocations([]);
@@ -104,7 +102,6 @@ function NewBoxInner() {
     const codesRes = await supabase
       .from("boxes")
       .select("code")
-      .eq("owner_id", userId)
       .order("code");
 
     if (codesRes.error) {
@@ -114,19 +111,44 @@ function NewBoxInner() {
       setExistingCodes((codesRes.data ?? []).map((b: BoxMini) => b.code));
     }
 
-    const projectRes = await supabase
+    const ownedRes = await supabase
       .from("projects")
       .select("id,name")
       .eq("owner_id", userId)
       .order("name");
 
-    if (!projectRes.error) setProjects((projectRes.data ?? []) as ProjectRow[]);
+    if (ownedRes.error) {
+      setError((prev) => prev ?? ownedRes.error?.message || "Failed to load projects.");
+    }
+
+    const memberRes = await supabase
+      .from("project_members")
+      .select("project_id")
+      .eq("user_id", userId);
+
+    if (memberRes.error) {
+      setError((prev) => prev ?? memberRes.error?.message || "Failed to load project members.");
+    }
+
+    const memberIds = (memberRes.data ?? []).map((m) => m.project_id as string);
+    const owned = (ownedRes.data ?? []) as ProjectRow[];
+    const allIds = Array.from(new Set([...owned.map((p) => p.id), ...memberIds]));
+
+    if (allIds.length) {
+      const allRes = await supabase
+        .from("projects")
+        .select("id,name")
+        .in("id", allIds)
+        .order("name");
+      if (!allRes.error) setProjects((allRes.data ?? []) as ProjectRow[]);
+    } else if (owned.length) {
+      setProjects(owned);
+    }
 
     // locations (per user)
     let locQuery = supabase
       .from("locations")
-      .select("id, name, project_id")
-      .eq("owner_id", userId);
+      .select("id, name, project_id");
 
     if (projectId === "__unassigned__") {
       locQuery = locQuery.is("project_id", null);

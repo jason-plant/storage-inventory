@@ -117,7 +117,6 @@ function LocationInner() {
       .from("locations")
       .select("id, name")
       .eq("id", locationId)
-      .eq("owner_id", userId)
       .maybeSingle();
 
     if (!locRes.data || locRes.error) {
@@ -135,7 +134,6 @@ function LocationInner() {
     const allLocRes = await supabase
       .from("locations")
       .select("id, name")
-      .eq("owner_id", userId)
       .order("name");
 
     setAllLocations((allLocRes.data ?? []) as LocationMini[]);
@@ -144,7 +142,6 @@ function LocationInner() {
       .from("boxes")
       .select("id, code, name, items ( quantity )")
       .eq("location_id", locationId)
-      .eq("owner_id", userId)
       .order("code");
 
     if (boxRes.error) {
@@ -323,7 +320,6 @@ function LocationInner() {
     const res = await supabase
       .from("boxes")
       .update({ location_id: info.toLocationId })
-      .eq("owner_id", userId)
       .in("id", info.boxIds);
 
     if (res.error) {
@@ -372,7 +368,6 @@ function LocationInner() {
     const res = await supabase
       .from("boxes")
       .update({ name: trimmed })
-      .eq("owner_id", userId)
       .eq("id", b.id)
       .select("id,name")
       .single();
@@ -417,7 +412,6 @@ function LocationInner() {
     const itemsRes = await supabase
       .from("items")
       .select("id, photo_url")
-      .eq("owner_id", userId)
       .eq("box_id", b.id);
 
     if (itemsRes.error) {
@@ -441,7 +435,6 @@ function LocationInner() {
     const delItemsRes = await supabase
       .from("items")
       .delete()
-      .eq("owner_id", userId)
       .eq("box_id", b.id);
 
     if (delItemsRes.error) {
@@ -451,9 +444,7 @@ function LocationInner() {
     }
 
     const delBoxRes = await supabase
-      .from("boxes")
       .delete()
-      .eq("owner_id", userId)
       .eq("id", b.id);
 
     if (delBoxRes.error) {
@@ -469,7 +460,6 @@ function LocationInner() {
   }
 
   if (loading) {
-    return (
       <main style={{ padding: 16 }}>
         <p>Loading…</p>
       </main>
@@ -478,7 +468,6 @@ function LocationInner() {
 
   if (!location) {
     return (
-      <main style={{ padding: 16 }}>
         <p style={{ color: "crimson" }}>{error ?? "Building not found."}</p>
       </main>
     );
@@ -536,7 +525,6 @@ function LocationInner() {
       <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
         {boxes.map((b) => {
           const isSelected = selectedIds.has(b.id);
-          const totalQty = b.items?.reduce((sum, it) => sum + (it.quantity ?? 0), 0) ?? 0;
 
           return (
             <a
@@ -571,7 +559,6 @@ function LocationInner() {
                     padding: "4px 10px",
                     borderRadius: 999,
                     fontWeight: 900,
-                    fontSize: 13,
                     background: "#ecfdf5",
                     border: "1px solid #bbf7d0",
                     color: "#166534",

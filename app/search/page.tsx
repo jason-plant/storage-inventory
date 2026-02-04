@@ -88,7 +88,6 @@ export default function SearchPage() {
       let locQuery = supabase
         .from("locations")
         .select("id")
-        .eq("owner_id", userId)
         .ilike("name", like);
 
       if (activeProjectId) {
@@ -107,7 +106,6 @@ export default function SearchPage() {
         projectLocRes = await supabase
           .from("locations")
           .select("id")
-          .eq("owner_id", userId)
           .eq("project_id", activeProjectId);
 
         projectLocationIds = (projectLocRes.data ?? []).map((l) => l.id);
@@ -116,7 +114,6 @@ export default function SearchPage() {
           projectBoxesRes = await supabase
             .from("boxes")
             .select("id")
-            .eq("owner_id", userId)
             .in("location_id", projectLocationIds);
 
           projectBoxIds = (projectBoxesRes.data ?? []).map((b) => b.id);
@@ -131,7 +128,6 @@ export default function SearchPage() {
         let boxQuery = supabase
           .from("boxes")
           .select("id")
-          .eq("owner_id", userId)
           .or(`code.ilike.${like},name.ilike.${like}`);
 
         if (activeProjectId) boxQuery = boxQuery.in("location_id", projectLocationIds);
@@ -144,7 +140,6 @@ export default function SearchPage() {
         ? await supabase
             .from("boxes")
             .select("id")
-            .eq("owner_id", userId)
             .in("location_id", locationIds)
         : { data: [], error: null };
 
@@ -158,7 +153,6 @@ export default function SearchPage() {
         let itemsQuery = supabase
           .from("items")
           .select(itemSelect)
-          .eq("owner_id", userId)
           .or(`name.ilike.${like},description.ilike.${like}`);
 
         if (activeProjectId) itemsQuery = itemsQuery.in("box_id", projectBoxIds);
@@ -176,7 +170,6 @@ export default function SearchPage() {
         ? await supabase
             .from("items")
             .select(itemSelect)
-            .eq("owner_id", userId)
             .in("box_id", scopedBoxIdList)
         : { data: [], error: null };
 

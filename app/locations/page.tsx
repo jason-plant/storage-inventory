@@ -73,8 +73,7 @@ function LocationsInner() {
     // locations + count of related boxes
     let query = supabase
       .from("locations")
-      .select("id,name,project_id, boxes(count)")
-      .eq("owner_id", userId);
+      .select("id,name,project_id, boxes(count)");
 
     if (projectId === "__unassigned__") {
       query = query.is("project_id", null);
@@ -138,7 +137,6 @@ function LocationsInner() {
     const res = await supabase
       .from("locations")
       .update({ name: trimmed })
-      .eq("owner_id", userId)
       .eq("id", l.id)
       .select("id,name")
       .single();
@@ -180,7 +178,6 @@ function LocationsInner() {
     const boxesRes = await supabase
       .from("boxes")
       .select("id", { count: "exact", head: true })
-      .eq("owner_id", userId)
       .eq("location_id", l.id);
 
     if (boxesRes.error) {

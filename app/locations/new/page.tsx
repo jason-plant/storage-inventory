@@ -42,10 +42,40 @@ function NewLocationInner() {
 
       if (authErr || !userId) return;
 
-      const res = await supabase
+      const ownedRes = await supabase
         .from("projects")
         .select("id,name")
         .eq("owner_id", userId)
+        .order("name");
+
+      if (ownedRes.error) {
+        setError(ownedRes.error.message);
+        return;
+      }
+
+      const memberRes = await supabase
+        .from("project_members")
+        .select("project_id")
+        .eq("user_id", userId);
+
+      if (memberRes.error) {
+        setError(memberRes.error.message);
+        return;
+      }
+
+      const memberIds = (memberRes.data ?? []).map((m) => m.project_id as string);
+      const owned = (ownedRes.data ?? []) as ProjectRow[];
+      const allIds = Array.from(new Set([...owned.map((p) => p.id), ...memberIds]));
+
+      if (!allIds.length) {
+        setProjects([]);
+        return;
+      }
+
+      const res = await supabase
+        .from("projects")
+        .select("id,name")
+        .in("id", allIds)
         .order("name");
 
       if (!res.error) setProjects((res.data ?? []) as ProjectRow[]);
