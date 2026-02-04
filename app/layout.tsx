@@ -12,8 +12,8 @@ import ThemeInitializer from "./components/ThemeInitializer";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Storage Inventory",
-  description: "Box and item inventory system",
+  title: "Pinnacle Legacy Survey",
+  description: "Pinnacle Legacy Survey inventory system",
   icons: {
     icon: "/icons/icon-192.png",
     shortcut: "/icons/icon-32.png",
