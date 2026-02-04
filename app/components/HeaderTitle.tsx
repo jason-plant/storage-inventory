@@ -133,7 +133,7 @@ export default function HeaderTitle({ hideIcon = false, iconOnly = false }: Head
   }
 
   return (
-    <Link href={meta.href} style={{ textDecoration: "none", color: "#111", display: "flex", alignItems: "center", gap: 10, minWidth: 0, width: '100%' }}>
+    <Link href={meta.href} style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 10, minWidth: 0, width: '100%' }}>
       {!hideIcon && (
         <div style={{ width: 36, height: 36, flex: "0 0 auto", position: "relative" }}>
           <div
@@ -149,10 +149,10 @@ export default function HeaderTitle({ hideIcon = false, iconOnly = false }: Head
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "#fff",
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-                color: "#111",
+                background: "rgba(255,255,255,0.12)",
+                border: "1px solid rgba(255,255,255,0.35)",
+                boxShadow: "0 1px 6px rgba(0,0,0,0.2)",
+                color: "#fff",
               }}
             >
               {Icon}

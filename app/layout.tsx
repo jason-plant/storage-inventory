@@ -94,9 +94,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 position: "sticky",
                 top: 0,
                 zIndex: 100,
-                background: "color-mix(in srgb, var(--surface) 92%, transparent)",
-                backdropFilter: "blur(10px)",
-                borderBottom: "1px solid var(--border)",
+                background: "var(--brand-teal)",
+                color: "#fff",
+                borderBottom: "1px solid rgba(255,255,255,0.2)",
               }}
             >
               <div

@@ -23,5 +23,13 @@ export default function ThemeInitializer() {
     }
   }, []);
 
+  useEffect(() => {
+    function onContextMenu(e: Event) {
+      e.preventDefault();
+    }
+    document.addEventListener("contextmenu", onContextMenu, { passive: false });
+    return () => document.removeEventListener("contextmenu", onContextMenu);
+  }, []);
+
   return null;
 }

@@ -86,20 +86,21 @@ export default function Modal({
 
   if (!mounted) return null;
 
-  // Force all modals to be bottom-aligned
+  const alignItems = anchor === "center" ? "center" : anchor === "top-right" ? "flex-start" : "flex-end";
+  const justifyContent = anchor === "top-right" ? "flex-end" : "center";
   const containerStyle: React.CSSProperties = {
     position: "fixed",
     inset: 0,
     zIndex: 4000,
     display: "flex",
     padding: 12,
-    justifyContent: "center",
-    alignItems: "flex-end",
+    justifyContent,
+    alignItems,
   };
 
   const panelStyle: React.CSSProperties = {
     width: "100%",
-    maxWidth: 520,
+    maxWidth: anchor === "top-right" ? 420 : 520,
     maxHeight: "calc(100dvh - 24px)",
     overflow: "auto",
     background: "#fff",
