@@ -307,20 +307,45 @@ export default function BurgerMenu() {
         Building: locationById.get(b.location_id) || "",
       }));
 
-      const itemRows = ffeItems.map((it) => {
-        const box = boxById.get(it.box_id);
-        const buildingName = box?.location_id ? locationById.get(box.location_id) || "" : "";
-        return {
-          FFE: it.name,
-          Description: it.description || "",
-          Quantity: it.quantity ?? "",
-          Condition: it.condition ?? "",
-          RoomCode: box?.code || "",
-          RoomName: box?.name || "",
-          Building: buildingName,
-          PhotoUrl: it.photo_url || "",
-        };
+      const unitsByItem = new Map<string, { id: string; item_id: string; legacy_code: string }[]>();
+      units.forEach((u) => {
+        const key = u.item_id as string;
+        if (!unitsByItem.has(key)) unitsByItem.set(key, []);
+        unitsByItem.get(key)!.push(u as { id: string; item_id: string; legacy_code: string });
       });
+
+      const itemRows = units.length
+        ? units.map((u) => {
+            const it = itemById.get(u.item_id as string);
+            const box = it ? boxById.get((it as any).box_id) : undefined;
+            const buildingName = box?.location_id ? locationById.get(box.location_id) || "" : "";
+            return {
+              "Legacy Code": u.legacy_code || "",
+              FFE: it?.name || "",
+              Description: it?.description || "",
+              Quantity: 1,
+              Condition: it?.condition ?? "",
+              RoomCode: box?.code || "",
+              RoomName: box?.name || "",
+              Building: buildingName,
+              PhotoUrl: it?.photo_url || "",
+            };
+          })
+        : ffeItems.map((it) => {
+            const box = boxById.get(it.box_id);
+            const buildingName = box?.location_id ? locationById.get(box.location_id) || "" : "";
+            return {
+              "Legacy Code": "",
+              FFE: it.name,
+              Description: it.description || "",
+              Quantity: it.quantity ?? "",
+              Condition: it.condition ?? "",
+              RoomCode: box?.code || "",
+              RoomName: box?.name || "",
+              Building: buildingName,
+              PhotoUrl: it.photo_url || "",
+            };
+          });
 
       const legacyRows = units.length
         ? units.map((u, idx) => {
