@@ -39,6 +39,7 @@ export default function NewBoxInLocationPage() {
   const [location, setLocation] = useState<LocationRow | null>(null);
   const [allBoxes, setAllBoxes] = useState<BoxMini[]>([]);
   const [name, setName] = useState("");
+  const [roomNumber, setRoomNumber] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -119,6 +120,7 @@ export default function NewBoxInLocationPage() {
         owner_id: userId,
         code: nextAutoCode, // hidden from user
         name: trimmed,
+        room_number: roomNumber.trim() || null,
         location_id: location.id,
       })
       .select("code")
@@ -168,6 +170,13 @@ export default function NewBoxInLocationPage() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoFocus
+          disabled={busy}
+        />
+
+        <input
+          placeholder="Room number (e.g. 204)"
+          value={roomNumber}
+          onChange={(e) => setRoomNumber(e.target.value)}
           disabled={busy}
         />
 

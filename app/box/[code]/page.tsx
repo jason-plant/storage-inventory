@@ -347,6 +347,26 @@ export default function BoxPage() {
     const item = items.find((i) => i.id === itemId);
     if (!item) return;
 
+    if (safeQty !== (item.quantity ?? 0)) {
+      const lockedRes = await supabase
+        .from("item_units")
+        .select("id")
+        .eq("item_id", itemId)
+        .not("locked_at", "is", null)
+        .limit(1);
+
+      if (lockedRes.error) {
+        setError(lockedRes.error.message);
+        return;
+      }
+
+      if ((lockedRes.data ?? []).length > 0) {
+        setError("Legacy codes are locked for this FFE. Quantity cannot be changed.");
+        setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, quantity: item.quantity } : i)));
+        return;
+      }
+    }
+
     if (safeQty === 0) {
       requestDeleteItem(item, "qty0");
       return;
@@ -405,6 +425,24 @@ export default function BoxPage() {
 
     const safeQty = Math.max(0, Math.floor(Number(editQty) || 0));
     const safeCondition = Math.min(5, Math.max(1, Math.floor(Number(editCondition) || 3)));
+    if (safeQty !== (it.quantity ?? 0)) {
+      const lockedRes = await supabase
+        .from("item_units")
+        .select("id")
+        .eq("item_id", it.id)
+        .not("locked_at", "is", null)
+        .limit(1);
+
+      if (lockedRes.error) {
+        setError(lockedRes.error.message);
+        return;
+      }
+
+      if ((lockedRes.data ?? []).length > 0) {
+        setError("Legacy codes are locked for this FFE. Quantity cannot be changed.");
+        return;
+      }
+    }
     if (safeQty === 0) {
       setEditItemOpen(false);
       editItemRef.current = null;
@@ -535,6 +573,23 @@ export default function BoxPage() {
       return;
     }
 
+    const lockedRes = await supabase
+      .from("item_units")
+      .select("id")
+      .eq("item_id", itemId)
+      .not("locked_at", "is", null)
+      .limit(1);
+
+    if (lockedRes.error) {
+      setError(lockedRes.error.message);
+      return;
+    }
+
+    if ((lockedRes.data ?? []).length > 0) {
+      setError("Legacy codes are locked for this FFE. Quantity cannot be changed.");
+      return;
+    }
+
     const unitsRes = await supabase
       .from("item_units")
       .select("id, legacy_code, created_at")
@@ -614,7 +669,7 @@ export default function BoxPage() {
 
     const res = await supabase
       .from("item_units")
-      .select("legacy_code")
+      .select("legacy_code, locked_at")
       .eq("item_id", i.id)
       .order("legacy_code");
 
@@ -624,7 +679,8 @@ export default function BoxPage() {
       return;
     }
 
-    setUnitCodes((res.data ?? []).map((r) => r.legacy_code as string));
+    const codes = (res.data ?? []).map((r) => r.legacy_code as string);
+    setUnitCodes(codes);
     setUnitLoading(false);
   }
 

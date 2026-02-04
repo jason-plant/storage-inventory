@@ -66,12 +66,13 @@ function NewBoxInner() {
   const [locationId, setLocationId] = useState<string>(initialLocationId);
 
   const { setDirty } = useUnsavedChanges();
+  const [roomNumber, setRoomNumber] = useState("");
 
   useEffect(() => {
     const dirty = name.trim() !== "" || Boolean(locationId);
     setDirty(dirty);
   }, [name, locationId, setDirty]);
-
+    const dirty = name.trim() !== "" || roomNumber.trim() !== "" || Boolean(locationId);
   useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = localStorage.getItem("activeProjectId") || "";
@@ -91,6 +92,7 @@ function NewBoxInner() {
     const userId = sessionData.session?.user?.id;
 
     if (sessionErr || !userId) {
+          room_number: roomNumber.trim() || null,
       setError(sessionErr?.message || "Not logged in.");
       setExistingCodes([]);
       setLocations([]);
@@ -156,6 +158,12 @@ function NewBoxInner() {
   }, [projectId]);
 
   const nextAutoCode = useMemo(() => {
+          <input
+            placeholder="Room number (e.g. 204)"
+            value={roomNumber}
+            onChange={(e) => setRoomNumber(e.target.value)}
+            disabled={busy || loading}
+          />
     let max = 0;
     for (const c of existingCodes) {
       const n = parseBoxNumber(c);

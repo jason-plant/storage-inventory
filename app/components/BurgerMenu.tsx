@@ -266,7 +266,7 @@ export default function BurgerMenu() {
       const boxesRes = locationIds.length
         ? await supabase
             .from("boxes")
-            .select("id, code, name, location_id")
+            .select("id, code, name, room_number, location_id")
             .in("location_id", locationIds)
             .order("code")
         : { data: [], error: null };
@@ -286,11 +286,22 @@ export default function BurgerMenu() {
 
       const unitsRes = await supabase
         .from("item_units")
-        .select("id, item_id, legacy_code")
+        .select("id, item_id, legacy_code, locked_at")
         .eq("project_id", activeProjectId)
         .order("legacy_code");
       if (unitsRes.error) throw unitsRes.error;
       const units = unitsRes.data ?? [];
+
+      if (units.length) {
+        const unlockeds = units.filter((u) => !u.locked_at).map((u) => u.id as string);
+        if (unlockeds.length) {
+          const lockRes = await supabase
+            .from("item_units")
+            .update({ locked_at: new Date().toISOString() })
+            .in("id", unlockeds);
+          if (lockRes.error) throw lockRes.error;
+        }
+      }
 
       const locationById = new Map(locations.map((l) => [l.id, l.name] as const));
       const boxById = new Map(boxes.map((b) => [b.id, b] as const));
@@ -304,6 +315,7 @@ export default function BurgerMenu() {
       const roomRows = boxes.map((b) => ({
         RoomCode: b.code,
         RoomName: b.name || "",
+        RoomNumber: b.room_number || "",
         Building: locationById.get(b.location_id) || "",
       }));
 
@@ -356,7 +368,7 @@ export default function BurgerMenu() {
               "No.": idx + 1,
               "Legacy Code": u.legacy_code || "",
               Building: buildingName,
-              "Room Number": box?.code || "",
+              "Room Number": (box as any)?.room_number || box?.code || "",
               "Room Name": box?.name || "",
               Description: it?.description || "",
               Quantity: 1,
@@ -384,7 +396,7 @@ export default function BurgerMenu() {
               "No.": idx + 1,
               "Legacy Code": "",
               Building: buildingName,
-              "Room Number": box?.code || "",
+              "Room Number": (box as any)?.room_number || box?.code || "",
               "Room Name": box?.name || "",
               Description: it.description || "",
               Quantity: it.quantity ?? "",
