@@ -103,9 +103,10 @@ export default function Modal({
     maxWidth: anchor === "top-right" ? 420 : 520,
     maxHeight: "calc(100dvh - 24px)",
     overflow: "auto",
-    background: "#fff",
+    background: "var(--bg)",
+    color: "var(--text)",
     borderRadius: 18,
-    border: "1px solid #e5e7eb",
+    border: "1px solid var(--border)",
     boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
     padding: 14,
   };
