@@ -66,15 +66,21 @@ function ScanItemInner() {
   const [name, setName] = useState("");
   const [qty, setQty] = useState<number>(1);
   const [desc, setDesc] = useState("");
+  const [condition, setCondition] = useState<number>(3);
 
   // Unsaved changes tracking
   const { setDirty } = useUnsavedChanges();
 
   // mark dirty when any of the form fields change
   useEffect(() => {
-    const dirty = Boolean(capturedFile) || name.trim() !== "" || desc.trim() !== "" || qty !== 1;
+    const dirty =
+      Boolean(capturedFile) ||
+      name.trim() !== "" ||
+      desc.trim() !== "" ||
+      qty !== 1 ||
+      condition !== 3;
     setDirty(dirty);
-  }, [capturedFile, name, desc, qty, setDirty]);
+  }, [capturedFile, name, desc, qty, condition, setDirty]);
 
   async function loadBoxes() {
     setError(null);
@@ -145,6 +151,7 @@ function ScanItemInner() {
     setName("");
     setDesc("");
     setQty(1);
+    setCondition(3);
     // focus name field after photo is set
     setTimeout(() => nameInputRef.current?.focus(), 50);
   }
@@ -233,6 +240,7 @@ function ScanItemInner() {
         name: name.trim(),
         description: desc.trim() ? desc.trim() : null,
         quantity: Math.max(1, Math.floor(Number(qty) || 1)),
+        condition,
         photo_url: null,
       })
       .select("id")
@@ -501,6 +509,22 @@ function ScanItemInner() {
             disabled={busy}
             style={{ width: 140 }}
           />
+        </label>
+
+        <label style={{ display: "grid", gap: 6, marginTop: 10 }}>
+          <span style={{ fontWeight: 900 }}>Condition (1–5)</span>
+          <select
+            value={condition}
+            onChange={(e) => setCondition(Number(e.target.value))}
+            disabled={busy}
+            style={{ width: 140 }}
+          >
+            <option value={1}>1</option>
+            <option value={2}>2</option>
+            <option value={3}>3</option>
+            <option value={4}>4</option>
+            <option value={5}>5</option>
+          </select>
         </label>
 
         <label style={{ display: "grid", gap: 6, marginTop: 10 }}>

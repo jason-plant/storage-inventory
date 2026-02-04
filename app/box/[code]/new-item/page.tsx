@@ -15,14 +15,15 @@ export default function NewItemPage() {
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [qty, setQty] = useState(1);
+  const [condition, setCondition] = useState(3);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const { setDirty } = useUnsavedChanges();
 
   useEffect(() => {
-    const dirty = name.trim() !== "" || desc.trim() !== "" || qty !== 1 || Boolean(photoFile);
+    const dirty = name.trim() !== "" || desc.trim() !== "" || qty !== 1 || condition !== 3 || Boolean(photoFile);
     setDirty(dirty);
-  }, [name, desc, qty, photoFile, setDirty]);
+  }, [name, desc, qty, condition, photoFile, setDirty]);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +68,7 @@ export default function NewItemPage() {
         name: name.trim(),
         description: desc.trim() || null,
         quantity: qty,
+        condition,
       })
       .select("id")
       .single();
@@ -173,6 +175,17 @@ export default function NewItemPage() {
               value={qty}
               onChange={(e) => setQty(Number(e.target.value))}
             />
+
+            <label style={{ display: "grid", gap: 6 }}>
+              <span style={{ fontWeight: 800 }}>Condition (1–5)</span>
+              <select value={condition} onChange={(e) => setCondition(Number(e.target.value))}>
+                <option value={1}>1</option>
+                <option value={2}>2</option>
+                <option value={3}>3</option>
+                <option value={4}>4</option>
+                <option value={5}>5</option>
+              </select>
+            </label>
 
             {/* PHOTO PICKERS */}
             <div>

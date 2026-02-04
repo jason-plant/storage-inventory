@@ -227,21 +227,25 @@ function NewBoxInner() {
       return { ok: false as const, message: sessionErr?.message || "Not logged in." };
     }
 
-    const insertRes = await supabase.from("boxes").insert([
-      {
-        id: generateId(),
-        owner_id: userId,
-        code: code.toUpperCase(),
-        name: name.trim() || null,
-        location_id: locationId || null,
-      },
-    ]);
+    const insertRes = await supabase
+      .from("boxes")
+      .insert([
+        {
+          id: generateId(),
+          owner_id: userId,
+          code: code.toUpperCase(),
+          name: name.trim() || null,
+          location_id: locationId || null,
+        },
+      ])
+      .select("code")
+      .single();
 
-    if (insertRes.error) {
-      return { ok: false as const, message: insertRes.error.message };
+    if (insertRes.error || !insertRes.data) {
+      return { ok: false as const, message: insertRes.error?.message || "Failed to create room." };
     }
 
-    return { ok: true as const };
+    return { ok: true as const, code: insertRes.data.code };
   }
 
   async function save() {
@@ -273,7 +277,7 @@ function NewBoxInner() {
 
     // ✅ return to location if provided, otherwise boxes list
     setDirty(false);
-    const dest = returnTo ? decodeURIComponent(returnTo) : "/boxes";
+    const dest = result.code ? `/box/${encodeURIComponent(result.code)}/new-item` : (returnTo ? decodeURIComponent(returnTo) : "/boxes");
     router.push(dest);
     router.refresh();
   }

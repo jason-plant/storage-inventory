@@ -35,6 +35,7 @@ type ItemRow = {
   description: string | null;
   photo_url: string | null;
   quantity: number | null;
+  condition: number | null;
 };
 
 function pad3(n: number) {
@@ -127,6 +128,7 @@ export default function BoxPage() {
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editQty, setEditQty] = useState<number>(0);
+  const [editCondition, setEditCondition] = useState<number>(3);
   const [editRemovePhoto, setEditRemovePhoto] = useState(false);
 
 
@@ -190,7 +192,7 @@ export default function BoxPage() {
 
       const itemsRes = await supabase
         .from("items")
-        .select("id, name, description, photo_url, quantity")
+        .select("id, name, description, photo_url, quantity, condition")
         .eq("owner_id", userId)
         .eq("box_id", boxRes.data.id)
         .order("name");
@@ -245,6 +247,7 @@ export default function BoxPage() {
       setEditName("");
       setEditDesc("");
       setEditQty(0);
+      setEditCondition(3);
       setEditRemovePhoto(false);
       setEditNewPhoto(null);
 
@@ -269,7 +272,7 @@ export default function BoxPage() {
 
     const { data } = await supabase
       .from("items")
-      .select("id, name, description, photo_url, quantity")
+      .select("id, name, description, photo_url, quantity, condition")
       .eq("owner_id", userId)
       .eq("box_id", boxId)
       .order("name");
@@ -364,6 +367,7 @@ export default function BoxPage() {
     setEditName(i.name ?? "");
     setEditDesc(i.description ?? "");
     setEditQty(i.quantity ?? 0);
+    setEditCondition(i.condition ?? 3);
     setEditRemovePhoto(false);
     setEditNewPhoto(null);
     setEditItemOpen(true);
@@ -385,6 +389,7 @@ export default function BoxPage() {
     }
 
     const safeQty = Math.max(0, Math.floor(Number(editQty) || 0));
+    const safeCondition = Math.min(5, Math.max(1, Math.floor(Number(editCondition) || 3)));
     if (safeQty === 0) {
       setEditItemOpen(false);
       editItemRef.current = null;
@@ -475,6 +480,7 @@ export default function BoxPage() {
       name: trimmedName,
       description: editDesc.trim() ? editDesc.trim() : null,
       quantity: safeQty,
+      condition: safeCondition,
       photo_url: newPhotoUrl,
     };
 
@@ -483,7 +489,7 @@ export default function BoxPage() {
       .update(updatePayload)
       .eq("owner_id", userId)
       .eq("id", it.id)
-      .select("id, name, description, photo_url, quantity")
+      .select("id, name, description, photo_url, quantity, condition")
       .single();
 
     if (res.error || !res.data) {
@@ -977,6 +983,12 @@ export default function BoxPage() {
             {items.map((i) => {
               const hasPhoto = Boolean(i.photo_url);
               const isSelected = selectedIds.has(i.id);
+              const conditionValue = i.condition ?? 3;
+              const conditionBg = conditionValue <= 2
+                ? "#dcfce7"
+                : conditionValue === 3
+                ? "#ffedd5"
+                : "#fee2e2";
 
               return (
                 <div
@@ -985,7 +997,7 @@ export default function BoxPage() {
                     if (moveMode) toggleSelected(i.id);
                   }}
                   style={{
-                    background: "#fff",
+                    background: conditionBg,
                     border: moveMode ? (isSelected ? "2px solid #16a34a" : "2px solid #e5e7eb") : "1px solid #e5e7eb",
                     borderRadius: 18,
                     padding: 14,
@@ -1322,6 +1334,17 @@ export default function BoxPage() {
               <span style={{ fontWeight: 800 }}>Quantity</span>
               <input type="number" min={0} value={editQty} onChange={(e) => setEditQty(Number(e.target.value))} disabled={busy} />
               <div style={{ opacity: 0.7, fontSize: 13 }}>Setting quantity to 0 will ask to delete the FFE.</div>
+            </label>
+
+            <label style={{ display: "grid", gap: 6 }}>
+              <span style={{ fontWeight: 800 }}>Condition (1–5)</span>
+              <select value={editCondition} onChange={(e) => setEditCondition(Number(e.target.value))} disabled={busy}>
+                <option value={1}>1</option>
+                <option value={2}>2</option>
+                <option value={3}>3</option>
+                <option value={4}>4</option>
+                <option value={5}>5</option>
+              </select>
             </label>
 
             <div style={{ display: "grid", gap: 10 }}>
