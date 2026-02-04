@@ -19,7 +19,7 @@ export default function SettingsPage() {
   const { iconSettings, setIconStyle } = useIconSettings();
   const [tab, setTab] = useState<'appearance' | 'profile'>('appearance');
   const [theme, setTheme] = useState<"light" | "dark">((typeof window !== "undefined" && getStoredTheme()) || "light");
-  const [palette, setPalette] = useState<string>((typeof window !== "undefined" && getStoredPalette()) || "stone");
+  const [palette, setPalette] = useState<string>((typeof window !== "undefined" && getStoredPalette()) || "brand");
   const [customText, setCustomText] = useState<string>("");
   const [customBg, setCustomBg] = useState<string>("");
   const [customSurface, setCustomSurface] = useState<string>("");
@@ -187,7 +187,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(0, 1fr))", gap: 10, alignItems: "start", width: "100%", boxSizing: "border-box" }}>
-                {(["ivory", "stone", "warm", "anthracite"] as Array<keyof typeof PALETTES>).map((k) => (
+                {(["brand", "ivory", "stone", "warm", "anthracite"] as Array<keyof typeof PALETTES>).map((k) => (
                   <button
                     key={k}
                     type="button"

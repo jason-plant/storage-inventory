@@ -22,9 +22,18 @@ export function applyCustomButtonColors() {
   if (danger) document.documentElement.style.setProperty('--btn-danger', danger);
   if (neutral) document.documentElement.style.setProperty('--btn-neutral', neutral);
 }
-export type PaletteKey = "ivory" | "stone" | "warm" | "anthracite" | "custom";
+export type PaletteKey = "brand" | "ivory" | "stone" | "warm" | "anthracite" | "custom";
 
-export const PALETTES: Record<Extract<PaletteKey, 'ivory' | 'stone' | 'warm' | 'anthracite'>, { bg: string; surface: string; border: string; text: string; muted: string; accent: string; }> = {
+export const PALETTES: Record<Extract<PaletteKey, 'brand' | 'ivory' | 'stone' | 'warm' | 'anthracite'>, { bg: string; surface: string; border: string; text: string; muted: string; accent: string; accent2?: string; }> = {
+  brand: {
+    bg: "#f1f7f9",
+    surface: "#ffffff",
+    border: "#d3e4ea",
+    text: "#0c1f2a",
+    muted: "#3c6474",
+    accent: "#f86483", // pink
+    accent2: "#093649", // teal
+  },
   ivory: {
     bg: "#FBFBFA",
     surface: "#FFFFFF",
@@ -73,7 +82,7 @@ export function getStoredPalette(): PaletteKey {
     const p = localStorage.getItem("palette") as PaletteKey | null;
     if (p && (p === 'custom' || PALETTES[p])) return p;
   } catch (e) {}
-  return "ivory";
+  return "brand";
 }
 
 export function applyTheme(theme: "light" | "dark", palette: PaletteKey) {
@@ -88,7 +97,8 @@ export function applyTheme(theme: "light" | "dark", palette: PaletteKey) {
     root.style.setProperty("--border", '#e5e7eb');
     root.style.setProperty("--text", customText);
     root.style.setProperty("--muted", '#6B7280');
-    root.style.setProperty("--accent", '#6B8FA3');
+    root.style.setProperty("--accent", '#f86483');
+    root.style.setProperty("--accent-2", '#093649');
   } else {
     const p = PALETTES[palette];
     root.style.setProperty("--bg", p.bg);
@@ -97,6 +107,7 @@ export function applyTheme(theme: "light" | "dark", palette: PaletteKey) {
     root.style.setProperty("--text", p.text);
     root.style.setProperty("--muted", p.muted);
     root.style.setProperty("--accent", p.accent);
+    root.style.setProperty("--accent-2", p.accent2 || p.accent);
   }
 
   if (theme === "dark") {
