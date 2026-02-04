@@ -11,8 +11,14 @@ import { useUnsavedChanges } from "../components/UnsavedChangesProvider";
 type LocationRow = {
   id: string;
   name: string;
+  project_id?: string | null;
   // comes from: .select("id,name, boxes(count)")
   boxes?: { count: number }[];
+};
+
+type ProjectRow = {
+  id: string;
+  name: string;
 };
 
 export default function LocationsPage() {
@@ -28,6 +34,8 @@ function LocationsInner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [locations, setLocations] = useState<LocationRow[]>([]);
+  const [projects, setProjects] = useState<ProjectRow[]>([]);
+  const [projectId, setProjectId] = useState<string>("");
 
   // delete modal
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -67,12 +75,32 @@ function LocationsInner() {
       return;
     }
 
-    // locations + count of related boxes
-    const { data, error } = await supabase
-      .from("locations")
-      .select("id,name, boxes(count)")
+    const projectRes = await supabase
+      .from("projects")
+      .select("id,name")
       .eq("owner_id", userId)
       .order("name");
+
+    if (projectRes.error) {
+      setError(projectRes.error.message);
+      setProjects([]);
+    } else {
+      setProjects((projectRes.data ?? []) as ProjectRow[]);
+    }
+
+    // locations + count of related boxes
+    let query = supabase
+      .from("locations")
+      .select("id,name,project_id, boxes(count)")
+      .eq("owner_id", userId);
+
+    if (projectId === "__unassigned__") {
+      query = query.is("project_id", null);
+    } else if (projectId) {
+      query = query.eq("project_id", projectId);
+    }
+
+    const { data, error } = await query.order("name");
 
     if (error) {
       setError(error.message);
@@ -85,8 +113,14 @@ function LocationsInner() {
   }
 
   useEffect(() => {
-    load();
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("activeProjectId") || "";
+    setProjectId(stored);
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [projectId]);
 
   // ========= EDIT =========
 
@@ -208,6 +242,30 @@ function LocationsInner() {
       <h1 className="sr-only" style={{ marginTop: 6 }}>Locations</h1>
       <p style={{ marginTop: 0, opacity: 0.75 }}>Choose a location to view its boxes.</p>
 
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+        <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          Project:
+          <select
+            value={projectId}
+            onChange={(e) => {
+              const value = e.target.value;
+              setProjectId(value);
+              try {
+                localStorage.setItem("activeProjectId", value);
+              } catch {}
+            }}
+          >
+            <option value="">All projects</option>
+            <option value="__unassigned__">Unassigned</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </label>
+
+        <a href="/projects" className="tap-btn">Manage projects</a>
+      </div>
+
       {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
       {loading && <p>Loading…</p>}
       {!loading && locations.length === 0 && <p>No locations yet.</p>}
@@ -281,7 +339,7 @@ function LocationsInner() {
 
       {/* FAB: Add Location */}
       <a
-        href="/locations/new"
+        href={projectId && projectId !== "__unassigned__" ? `/locations/new?projectId=${encodeURIComponent(projectId)}` : "/locations/new"}
         aria-label="Add location"
         style={{
           position: "fixed",

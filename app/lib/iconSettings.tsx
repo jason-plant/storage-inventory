@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 // List of icon keys used throughout the app
 export type IconKey =
+  | "projects"
   | "locations"
   | "boxes"
   | "search"
@@ -21,6 +22,7 @@ export type IconSettings = {
 };
 
 const DEFAULT_ICON_SETTINGS: IconSettings = {
+  projects: "svg",
   locations: "svg",
   boxes: "svg",
   search: "svg",

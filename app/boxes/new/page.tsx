@@ -12,6 +12,12 @@ type BoxMini = { code: string };
 type LocationRow = {
   id: string;
   name: string;
+  project_id?: string | null;
+};
+
+type ProjectRow = {
+  id: string;
+  name: string;
 };
 
 function pad3(n: number) {
@@ -48,6 +54,8 @@ function NewBoxInner() {
 
   const [existingCodes, setExistingCodes] = useState<string[]>([]);
   const [locations, setLocations] = useState<LocationRow[]>([]);
+  const [projects, setProjects] = useState<ProjectRow[]>([]);
+  const [projectId, setProjectId] = useState<string>("");
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -63,6 +71,12 @@ function NewBoxInner() {
     const dirty = name.trim() !== "" || Boolean(locationId);
     setDirty(dirty);
   }, [name, locationId, setDirty]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("activeProjectId") || "";
+    setProjectId(stored);
+  }, []);
 
   // Inline "create location" modal
   const [newLocOpen, setNewLocOpen] = useState(false);
@@ -98,12 +112,27 @@ function NewBoxInner() {
       setExistingCodes((codesRes.data ?? []).map((b: BoxMini) => b.code));
     }
 
-    // locations (per user)
-    const locRes = await supabase
-      .from("locations")
-      .select("id, name")
+    const projectRes = await supabase
+      .from("projects")
+      .select("id,name")
       .eq("owner_id", userId)
       .order("name");
+
+    if (!projectRes.error) setProjects((projectRes.data ?? []) as ProjectRow[]);
+
+    // locations (per user)
+    let locQuery = supabase
+      .from("locations")
+      .select("id, name, project_id")
+      .eq("owner_id", userId);
+
+    if (projectId === "__unassigned__") {
+      locQuery = locQuery.is("project_id", null);
+    } else if (projectId) {
+      locQuery = locQuery.eq("project_id", projectId);
+    }
+
+    const locRes = await locQuery.order("name");
 
     if (locRes.error) {
       setError((prev) => prev ?? locRes.error.message);
@@ -124,7 +153,7 @@ function NewBoxInner() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [projectId]);
 
   const nextAutoCode = useMemo(() => {
     let max = 0;
@@ -148,6 +177,11 @@ function NewBoxInner() {
     const trimmed = newLocName.trim();
     if (!trimmed) return;
 
+    if (!projectId || projectId === "__unassigned__") {
+      setError("Select a project before creating a location.");
+      return;
+    }
+
     setNewLocBusy(true);
     setError(null);
 
@@ -162,7 +196,7 @@ function NewBoxInner() {
 
     const res = await supabase
       .from("locations")
-      .insert({ owner_id: userId, name: trimmed })
+      .insert({ owner_id: userId, name: trimmed, project_id: projectId })
       .select("id, name")
       .single();
 
@@ -271,6 +305,28 @@ function NewBoxInner() {
             placeholder="Name (optional)"
             disabled={busy}
           />
+
+          <label style={{ display: "grid", gap: 6 }}>
+            <span style={{ fontWeight: 800 }}>Project</span>
+            <select
+              value={projectId}
+              onChange={(e) => {
+                const value = e.target.value;
+                setProjectId(value);
+                setLocationId("");
+                try {
+                  localStorage.setItem("activeProjectId", value);
+                } catch {}
+              }}
+              disabled={busy || loading}
+            >
+              <option value="">All projects</option>
+              <option value="__unassigned__">Unassigned</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </label>
 
           <select
             value={locationId}

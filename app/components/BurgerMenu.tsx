@@ -199,6 +199,7 @@ export default function BurgerMenu() {
   const items = useMemo(() => {
     if (!user) return [];
     return [
+      { label: "Projects", href: "/projects", icon: useAppIcon("projects") },
       { label: "Locations", href: "/locations", icon: useAppIcon("locations") },
       { label: "Boxes", href: "/boxes", icon: useAppIcon("boxes") },
       { label: "Search", href: "/search", icon: useAppIcon("search") },

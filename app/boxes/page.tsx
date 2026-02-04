@@ -10,6 +10,12 @@ import Modal from "../components/Modal";
 type LocationRow = {
   id: string;
   name: string;
+  project_id?: string | null;
+};
+
+type ProjectRow = {
+  id: string;
+  name: string;
 };
 
 type BoxRow = {
@@ -32,6 +38,8 @@ export default function BoxesPage() {
 function BoxesInner() {
   const [boxes, setBoxes] = useState<BoxRow[]>([]);
   const [locations, setLocations] = useState<LocationRow[]>([]);
+  const [projects, setProjects] = useState<ProjectRow[]>([]);
+  const [projectId, setProjectId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,12 +82,44 @@ function BoxesInner() {
     return () => window.removeEventListener("storage", readSetting);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("activeProjectId") || "";
+    setProjectId(stored);
+  }, []);
+
   async function loadAll() {
     setLoading(true);
     setError(null);
 
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+
+    if (authErr || !userId) {
+      setError(authErr?.message || "Not logged in.");
+      setLocations([]);
+      setBoxes([]);
+      setLoading(false);
+      return;
+    }
+
+    // Load projects
+    const projectRes = await supabase
+      .from("projects")
+      .select("id,name")
+      .eq("owner_id", userId)
+      .order("name");
+
+    if (!projectRes.error) setProjects((projectRes.data ?? []) as ProjectRow[]);
+
     // Load locations
-    const locRes = await supabase.from("locations").select("id,name").order("name");
+    let locQuery = supabase.from("locations").select("id,name,project_id").eq("owner_id", userId);
+    if (projectId === "__unassigned__") {
+      locQuery = locQuery.is("project_id", null);
+    } else if (projectId) {
+      locQuery = locQuery.eq("project_id", projectId);
+    }
+    const locRes = await locQuery.order("name");
     if (locRes.error) {
       setError(locRes.error.message);
       setLocations([]);
@@ -88,7 +128,7 @@ function BoxesInner() {
     }
 
     // Load boxes + item qty + location join
-    const boxRes = await supabase
+    let boxQuery = supabase
       .from("boxes")
       .select(
         `
@@ -97,10 +137,18 @@ function BoxesInner() {
         name,
         location_id,
         items ( quantity ),
-        locations:locations ( name )
+        locations:locations ( name, project_id )
       `
       )
       .order("code", { ascending: true });
+
+    if (projectId === "__unassigned__") {
+      boxQuery = boxQuery.is("locations.project_id", null);
+    } else if (projectId) {
+      boxQuery = boxQuery.eq("locations.project_id", projectId);
+    }
+
+    const boxRes = await boxQuery;
 
     if (boxRes.error) {
       setError(boxRes.error.message);
@@ -136,7 +184,7 @@ function BoxesInner() {
 
   useEffect(() => {
     loadAll();
-  }, []);
+  }, [projectId]);
 
   function requestDeleteBox(b: BoxRow) {
     boxToDeleteRef.current = b;
@@ -319,6 +367,11 @@ function BoxesInner() {
       return;
     }
 
+    if (!projectId || projectId === "__unassigned__") {
+      setError("Select a project before creating a location.");
+      return;
+    }
+
     setBusy(true);
     setError(null);
 
@@ -333,7 +386,7 @@ function BoxesInner() {
 
     const res = await supabase
       .from("locations")
-      .insert({ owner_id: userId, name: trimmed })
+      .insert({ owner_id: userId, name: trimmed, project_id: projectId })
       .select("id,name")
       .single();
 
@@ -401,6 +454,30 @@ function BoxesInner() {
   return (
     <main style={{ paddingBottom: moveMode ? 180 : 90 }}>
       <h1 className="sr-only" style={{ marginTop: 6 }}>Boxes</h1>
+
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+        <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          Project:
+          <select
+            value={projectId}
+            onChange={(e) => {
+              const value = e.target.value;
+              setProjectId(value);
+              try {
+                localStorage.setItem("activeProjectId", value);
+              } catch {}
+            }}
+          >
+            <option value="">All projects</option>
+            <option value="__unassigned__">Unassigned</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </label>
+
+        <a href="/projects" className="tap-btn">Manage projects</a>
+      </div>
 
       {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
       {loading && <p>Loading boxes…</p>}

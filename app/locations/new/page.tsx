@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import RequireAuth from "../../components/RequireAuth";
+
+type ProjectRow = {
+  id: string;
+  name: string;
+};
 
 export default function NewLocationPage() {
   return (
@@ -15,14 +20,48 @@ export default function NewLocationPage() {
 
 function NewLocationInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialProjectId = searchParams.get("projectId") ?? "";
 
   const [name, setName] = useState("");
+  const [projects, setProjects] = useState<ProjectRow[]>([]);
+  const [projectId, setProjectId] = useState<string>(initialProjectId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("activeProjectId") || "";
+    if (!initialProjectId && stored) setProjectId(stored);
+  }, [initialProjectId]);
+
+  useEffect(() => {
+    async function loadProjects() {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      const userId = authData.user?.id;
+
+      if (authErr || !userId) return;
+
+      const res = await supabase
+        .from("projects")
+        .select("id,name")
+        .eq("owner_id", userId)
+        .order("name");
+
+      if (!res.error) setProjects((res.data ?? []) as ProjectRow[]);
+    }
+
+    loadProjects();
+  }, []);
 
   async function save() {
     if (!name.trim()) {
       setError("Location name is required.");
+      return;
+    }
+
+    if (!projectId) {
+      setError("Project is required.");
       return;
     }
 
@@ -47,6 +86,7 @@ function NewLocationInner() {
       .insert({
         owner_id: userId,
         name: name.trim(),
+        project_id: projectId,
       })
       .select("id")
       .single();
@@ -56,6 +96,10 @@ function NewLocationInner() {
       setBusy(false);
       return;
     }
+
+    try {
+      localStorage.setItem("activeProjectId", projectId);
+    } catch {}
 
     router.push("/locations");
     router.refresh();
@@ -78,6 +122,16 @@ function NewLocationInner() {
         {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
 
         <div style={{ display: "grid", gap: 12 }}>
+          <label style={{ display: "grid", gap: 6 }}>
+            <span style={{ fontWeight: 800 }}>Project</span>
+            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={busy}>
+              <option value="">Select project…</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </label>
+
           <input
             placeholder="Location name (e.g. Shed, Loft, Garage)"
             value={name}
@@ -85,6 +139,10 @@ function NewLocationInner() {
             autoFocus
             disabled={busy}
           />
+
+          {projects.length === 0 && (
+            <a href="/projects" className="tap-btn">Create a project first</a>
+          )}
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button
@@ -98,7 +156,7 @@ function NewLocationInner() {
             <button
               type="button"
               onClick={save}
-              disabled={busy || !name.trim()}
+              disabled={busy || !name.trim() || !projectId}
               style={{ background: "#111", color: "#fff" }}
             >
               {busy ? "Saving..." : "Save location"}

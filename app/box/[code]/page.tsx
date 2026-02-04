@@ -26,6 +26,7 @@ type BoxMini = {
 type LocationRow = {
   id: string;
   name: string;
+  project_id?: string | null;
 };
 
 type ItemRow = {
@@ -86,6 +87,7 @@ export default function BoxPage() {
 
   // Locations for "create box" modal
   const [locations, setLocations] = useState<LocationRow[]>([]);
+  const [projectId, setProjectId] = useState<string>("");
 
   // Photo viewer
   const [viewItem, setViewItem] = useState<ItemRow | null>(null);
@@ -134,6 +136,12 @@ export default function BoxPage() {
   const [editNewPhoto, setEditNewPhoto] = useState<File | null>(null);
 
   const [hideBoxCode, setHideBoxCode] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("activeProjectId") || "";
+    setProjectId(stored);
+  }, []);
 
   const { setDirty } = useUnsavedChanges();
 
@@ -197,11 +205,18 @@ export default function BoxPage() {
 
       setAllBoxes((boxesRes.data ?? []) as BoxMini[]);
 
-      const locRes = await supabase
+      let locQuery = supabase
         .from("locations")
-        .select("id, name")
-        .eq("owner_id", userId)
-        .order("name");
+        .select("id, name, project_id")
+        .eq("owner_id", userId);
+
+      if (projectId === "__unassigned__") {
+        locQuery = locQuery.is("project_id", null);
+      } else if (projectId) {
+        locQuery = locQuery.eq("project_id", projectId);
+      }
+
+      const locRes = await locQuery.order("name");
 
       setLocations((locRes.data ?? []) as LocationRow[]);
 
@@ -540,6 +555,11 @@ export default function BoxPage() {
     const trimmed = newLocName.trim();
     if (!trimmed) return;
 
+    if (!projectId || projectId === "__unassigned__") {
+      setError("Select a project before creating a location.");
+      return;
+    }
+
     setBusy(true);
     setError(null);
 
@@ -554,7 +574,7 @@ export default function BoxPage() {
 
     const res = await supabase
       .from("locations")
-      .insert({ owner_id: userId, name: trimmed })
+      .insert({ owner_id: userId, name: trimmed, project_id: projectId })
       .select("id, name")
       .single();
 

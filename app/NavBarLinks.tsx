@@ -25,6 +25,13 @@ export default function NavBarLinks() {
       {user ? (
         <>
           <Link
+            href="/projects"
+            className={`nav-btn ${isActive("/projects") ? "active" : ""}`}
+          >
+            Projects
+          </Link>
+
+          <Link
             href="/locations"
             className={`nav-btn ${isActive("/locations") ? "active" : ""}`}
           >

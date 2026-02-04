@@ -21,6 +21,12 @@ export const IconBoxesSVG = () => (
     <path d="M7 9l5 3 5-3" />
   </Icon>
 );
+export const IconProjectsSVG = () => (
+  <Icon>
+    <path d="M3 7h7l2 2h9v8a2 2 0 0 1-2 2H3z" />
+    <path d="M3 7V5a2 2 0 0 1 2-2h4l2 2" />
+  </Icon>
+);
 export const IconSearchSVG = () => (
   <Icon>
     <circle cx="11" cy="11" r="6" />
@@ -58,6 +64,7 @@ export const IconHomeSVG = () => (
 // Emoji versions
 export const IconLocationsEmoji = () => <span role="img" aria-label="Locations">📍</span>;
 export const IconBoxesEmoji = () => <span role="img" aria-label="Boxes">📦</span>;
+export const IconProjectsEmoji = () => <span role="img" aria-label="Projects">🗂️</span>;
 export const IconSearchEmoji = () => <span role="img" aria-label="Search">🔍</span>;
 export const IconLabelsEmoji = () => <span role="img" aria-label="Labels">🏷️</span>;
 export const IconScanQREmoji = () => <span role="img" aria-label="Scan QR">� QR</span>;
@@ -69,6 +76,7 @@ import { useIconSettings } from "../lib/iconSettings";
 import type { IconKey } from "../lib/iconSettings";
 
 const iconMap: Record<IconKey, { svg: React.ComponentType; emoji: React.ComponentType }> = {
+  projects: { svg: IconProjectsSVG, emoji: IconProjectsEmoji },
   locations: { svg: IconLocationsSVG, emoji: IconLocationsEmoji },
   boxes: { svg: IconBoxesSVG, emoji: IconBoxesEmoji },
   search: { svg: IconSearchSVG, emoji: IconSearchEmoji },

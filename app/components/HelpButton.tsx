@@ -21,6 +21,18 @@ export default function HelpButton() {
         </>
       ) };
 
+    if (pathname.startsWith("/projects"))
+      return { title: "Projects", content: (
+        <>
+          <p>Projects group your locations into larger areas.</p>
+          <ul>
+            <li>Create a project first, then add locations under it.</li>
+            <li>Rename projects any time.</li>
+            <li>Delete a project only after removing or moving its locations.</li>
+          </ul>
+        </>
+      ) };
+
     if (pathname.startsWith("/locations/"))
       return { title: "Location", content: (
         <>

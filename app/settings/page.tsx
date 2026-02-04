@@ -152,6 +152,7 @@ export default function SettingsPage() {
                 <div style={{ fontWeight: 700, marginBottom: 6 }}>Icon style</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
                   {[
+                    { key: 'projects', label: 'Projects' },
                     { key: 'locations', label: 'Locations' },
                     { key: 'boxes', label: 'Boxes' },
                     { key: 'search', label: 'Search' },
