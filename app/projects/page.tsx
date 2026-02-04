@@ -311,13 +311,17 @@ function ProjectsInner() {
     if (!p) return;
     const userId = newMemberId.trim();
     if (!userId) return;
+    if (!currentUserId) {
+      setError("Missing current user.");
+      return;
+    }
 
     setMembersBusy(true);
     setError(null);
 
     const res = await supabase
       .from("project_members")
-      .insert({ project_id: p.id, user_id: userId, role: "member" })
+      .insert({ project_id: p.id, user_id: userId, role: "member", owner_id: currentUserId })
       .select("user_id, role, created_at")
       .single();
 

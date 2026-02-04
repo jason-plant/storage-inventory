@@ -340,6 +340,13 @@ function NewBoxInner() {
             disabled={busy}
           />
 
+          <input
+            value={roomNumber}
+            onChange={(e) => setRoomNumber(e.target.value)}
+            placeholder="Room number (e.g. 204)"
+            disabled={busy}
+          />
+
           <div style={{ display: "grid", gap: 6 }}>
             <span style={{ fontWeight: 800 }}>Project</span>
             <div style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid var(--border)", background: "var(--surface)" }}>
