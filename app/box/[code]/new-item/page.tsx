@@ -17,6 +17,7 @@ export default function NewItemPage() {
   const [qty, setQty] = useState(1);
   const [condition, setCondition] = useState(3);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [boxName, setBoxName] = useState("");
 
   const { setDirty } = useUnsavedChanges();
 
@@ -24,6 +25,24 @@ export default function NewItemPage() {
     const dirty = name.trim() !== "" || desc.trim() !== "" || qty !== 1 || condition !== 3 || Boolean(photoFile);
     setDirty(dirty);
   }, [name, desc, qty, condition, photoFile, setDirty]);
+
+  useEffect(() => {
+    if (!code) return;
+    let active = true;
+    (async () => {
+      const res = await supabase.from("boxes").select("name, code").eq("code", code).maybeSingle();
+      if (!active) return;
+      const resolvedName = res.data?.name?.trim() || res.data?.code || code;
+      setBoxName(resolvedName);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("activeRoomName", resolvedName);
+        window.dispatchEvent(new Event("active-room-changed"));
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [code]);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +69,7 @@ export default function NewItemPage() {
     // 1️⃣ Find box id
     const boxRes = await supabase
       .from("boxes")
-      .select("id")
+      .select("id, location_id, location:locations(project_id)")
       .eq("code", code)
       .maybeSingle();
 
@@ -60,14 +79,22 @@ export default function NewItemPage() {
       return;
     }
 
+    const projectId = boxRes.data.location?.project_id as string | undefined;
+    if (!projectId) {
+      setError("Project not found for this room.");
+      setBusy(false);
+      return;
+    }
+
     // 2️⃣ Create item first
+    const safeQty = Math.max(1, Math.floor(Number(qty) || 1));
     const insertRes = await supabase
       .from("items")
       .insert({
         box_id: boxRes.data.id,
         name: name.trim(),
         description: desc.trim() || null,
-        quantity: qty,
+        quantity: safeQty,
         condition,
       })
       .select("id")
@@ -79,9 +106,36 @@ export default function NewItemPage() {
       return;
     }
 
-    const itemId = insertRes.data.id;
+    const itemId = insertRes.data.id as string;
 
-    // 3️⃣ Upload photo if provided
+    // 3️⃣ Create legacy codes for each unit
+    const lastCodeRes = await supabase
+      .from("item_units")
+      .select("legacy_code")
+      .eq("project_id", projectId)
+      .order("legacy_code", { ascending: false })
+      .limit(1);
+
+    const lastCode = lastCodeRes.data?.[0]?.legacy_code || "LEG0000";
+    const lastNum = Number(String(lastCode).replace(/\D+/g, "")) || 0;
+    const units = Array.from({ length: safeQty }, (_, i) => {
+      const nextNum = lastNum + i + 1;
+      const codeNum = String(nextNum).padStart(4, "0");
+      return {
+        item_id: itemId,
+        project_id: projectId,
+        legacy_code: `LEG${codeNum}`,
+      };
+    });
+
+    const unitsRes = await supabase.from("item_units").insert(units);
+    if (unitsRes.error) {
+      setError(unitsRes.error.message || "Failed to create legacy codes.");
+      setBusy(false);
+      return;
+    }
+
+    // 4️⃣ Upload photo if provided
     if (photoFile) {
       let fileToUpload = photoFile;
 
@@ -150,7 +204,7 @@ export default function NewItemPage() {
         >
           <h1 className="sr-only" style={{ marginTop: 6 }}>Add FFE</h1>
           <p style={{ opacity: 0.85, marginTop: 0 }}>
-            Adding to <strong>{code}</strong>
+            Adding to <strong>{boxName || code}</strong>
           </p>
 
           {error && <p style={{ color: "crimson" }}>{error}</p>}

@@ -189,6 +189,11 @@ export default function BoxPage() {
       }
 
       setBox(boxRes.data);
+      if (typeof window !== "undefined") {
+        const resolvedRoomName = boxRes.data.name?.trim() || boxRes.data.code || "";
+        localStorage.setItem("activeRoomName", resolvedRoomName);
+        window.dispatchEvent(new Event("active-room-changed"));
+      }
 
       const itemsRes = await supabase
         .from("items")

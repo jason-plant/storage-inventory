@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
+import { supabase } from "../lib/supabaseClient";
 
 // small theme toggle import (lazy loaded)
 const ThemeToggleSmall = React.lazy(() => import("./ThemeToggle").then((m) => ({ default: () => <m.default small /> })));
@@ -55,6 +56,7 @@ export default function BurgerMenu() {
 
   const [open, setOpen] = useState(false);
   const [activeProjectId, setActiveProjectId] = useState<string>("");
+  const [exporting, setExporting] = useState(false);
 
   // Interactive swipe state
   const [swipeX, setSwipeX] = useState<number | null>(null);
@@ -209,9 +211,10 @@ export default function BurgerMenu() {
     setTimeout(() => panelRef.current?.focus(), 10);
   }, [open]);
 
+  const hasProject = Boolean(activeProjectId) && activeProjectId !== "__unassigned__";
+
   const items = useMemo(() => {
     if (!user) return [];
-    const hasProject = Boolean(activeProjectId) && activeProjectId !== "__unassigned__";
     return [
       { label: "Projects", href: "/projects", icon: useAppIcon("projects") },
       ...(hasProject ? [
@@ -236,6 +239,164 @@ export default function BurgerMenu() {
   function go(href: string) {
     setOpen(false);
     setTimeout(() => router.push(href), 200);
+  }
+
+  async function exportProjectToExcel() {
+    if (!hasProject || exporting) return;
+    setExporting(true);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user?.id;
+      if (!userId) throw new Error("Not logged in.");
+
+      const projectRes = await supabase.from("projects").select("name").eq("id", activeProjectId).maybeSingle();
+      if (projectRes.error) throw projectRes.error;
+      const projectName = projectRes.data?.name?.trim() || "Project";
+
+      const locRes = await supabase
+        .from("locations")
+        .select("id, name")
+        .eq("project_id", activeProjectId)
+        .order("name");
+      if (locRes.error) throw locRes.error;
+      const locations = locRes.data ?? [];
+      const locationIds = locations.map((l) => l.id);
+
+      const boxesRes = locationIds.length
+        ? await supabase
+            .from("boxes")
+            .select("id, code, name, location_id")
+            .in("location_id", locationIds)
+            .order("code")
+        : { data: [], error: null };
+      if (boxesRes.error) throw boxesRes.error;
+      const boxes = boxesRes.data ?? [];
+      const boxIds = boxes.map((b) => b.id);
+
+      const itemsRes = boxIds.length
+        ? await supabase
+            .from("items")
+            .select("id, name, description, quantity, condition, box_id, photo_url")
+            .in("box_id", boxIds)
+            .order("name")
+        : { data: [], error: null };
+      if (itemsRes.error) throw itemsRes.error;
+      const ffeItems = itemsRes.data ?? [];
+
+      const unitsRes = await supabase
+        .from("item_units")
+        .select("id, item_id, legacy_code")
+        .eq("project_id", activeProjectId)
+        .order("legacy_code");
+      if (unitsRes.error) throw unitsRes.error;
+      const units = unitsRes.data ?? [];
+
+      const locationById = new Map(locations.map((l) => [l.id, l.name] as const));
+      const boxById = new Map(boxes.map((b) => [b.id, b] as const));
+      const itemById = new Map(ffeItems.map((i) => [i.id, i] as const));
+
+      const buildingRows = locations.map((l) => ({
+        Building: l.name,
+        BuildingId: l.id,
+      }));
+
+      const roomRows = boxes.map((b) => ({
+        RoomCode: b.code,
+        RoomName: b.name || "",
+        Building: locationById.get(b.location_id) || "",
+      }));
+
+      const itemRows = ffeItems.map((it) => {
+        const box = boxById.get(it.box_id);
+        const buildingName = box?.location_id ? locationById.get(box.location_id) || "" : "";
+        return {
+          FFE: it.name,
+          Description: it.description || "",
+          Quantity: it.quantity ?? "",
+          Condition: it.condition ?? "",
+          RoomCode: box?.code || "",
+          RoomName: box?.name || "",
+          Building: buildingName,
+          PhotoUrl: it.photo_url || "",
+        };
+      });
+
+      const legacyRows = units.length
+        ? units.map((u, idx) => {
+            const it = itemById.get(u.item_id as string);
+            const box = it ? boxById.get((it as any).box_id) : undefined;
+            const buildingName = box?.location_id ? locationById.get(box.location_id) || "" : "";
+            return {
+              "No.": idx + 1,
+              "Legacy Code": u.legacy_code || "",
+              Building: buildingName,
+              "Room Number": box?.code || "",
+              "Room Name": box?.name || "",
+              Description: it?.description || "",
+              Quantity: 1,
+              "Item Type": "",
+              "DfE Code": "",
+              Condition: it?.condition ?? "",
+              "Life Expectancy": "",
+              "Make/Model": "",
+              Length: "",
+              Depth: "",
+              Height: "",
+              "Primary Colour": "",
+              "Secondary Colour": "",
+              "DfE Standard": "",
+              Comments: "",
+              "Photograph Code": u.legacy_code || "",
+              "Carbon Saving (KG)": "",
+              Photograph: it?.photo_url || "",
+            };
+          })
+        : ffeItems.map((it, idx) => {
+            const box = boxById.get(it.box_id);
+            const buildingName = box?.location_id ? locationById.get(box.location_id) || "" : "";
+            return {
+              "No.": idx + 1,
+              "Legacy Code": "",
+              Building: buildingName,
+              "Room Number": box?.code || "",
+              "Room Name": box?.name || "",
+              Description: it.description || "",
+              Quantity: it.quantity ?? "",
+              "Item Type": "",
+              "DfE Code": "",
+              Condition: it.condition ?? "",
+              "Life Expectancy": "",
+              "Make/Model": "",
+              Length: "",
+              Depth: "",
+              Height: "",
+              "Primary Colour": "",
+              "Secondary Colour": "",
+              "DfE Standard": "",
+              Comments: "",
+              "Photograph Code": "",
+              "Carbon Saving (KG)": "",
+              Photograph: it.photo_url || "",
+            };
+          });
+
+      const { utils, writeFile } = await import("xlsx");
+      const wb = utils.book_new();
+
+      utils.book_append_sheet(wb, utils.json_to_sheet(buildingRows), "Buildings");
+      utils.book_append_sheet(wb, utils.json_to_sheet(roomRows), "Rooms");
+      utils.book_append_sheet(wb, utils.json_to_sheet(itemRows), "FFE");
+      utils.book_append_sheet(wb, utils.json_to_sheet(legacyRows), "Legacy Report");
+
+      const safeName = projectName.replace(/[\\/:*?"<>|]+/g, "-").trim() || "Project";
+      const dateTag = new Date().toISOString().slice(0, 10);
+      writeFile(wb, `${safeName}-export-${dateTag}.xlsx`);
+    } catch (err: any) {
+      window.alert(err?.message || "Export failed.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   const overlay = mounted ? (
@@ -344,6 +505,14 @@ export default function BurgerMenu() {
               onClick={() => go(it.href)}
             />
           ))}
+
+          {hasProject && (
+            <MenuRow
+              icon={<span role="img" aria-label="Export">📤</span>}
+              label={exporting ? "Exporting…" : "Export project to Excel"}
+              onClick={exportProjectToExcel}
+            />
+          )}
 
           {/* Settings */}
           <MenuRow icon={<span role="img" aria-label="Settings">⚙️</span>} label="Settings" onClick={() => go("/settings")} />

@@ -18,6 +18,7 @@ export default function HeaderTitle({ hideIcon = false, iconOnly = false }: Head
 
   const [activeProjectName, setActiveProjectName] = useState<string>("");
   const [activeBuildingName, setActiveBuildingName] = useState<string>("");
+  const [activeRoomName, setActiveRoomName] = useState<string>("");
   useEffect(() => {
     if (typeof window === "undefined") return;
     const readProject = () => setActiveProjectName(localStorage.getItem("activeProjectName") || "");
@@ -42,6 +43,18 @@ export default function HeaderTitle({ hideIcon = false, iconOnly = false }: Head
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const readRoom = () => setActiveRoomName(localStorage.getItem("activeRoomName") || "");
+    readRoom();
+    window.addEventListener("storage", readRoom);
+    window.addEventListener("active-room-changed", readRoom as EventListener);
+    return () => {
+      window.removeEventListener("storage", readRoom);
+      window.removeEventListener("active-room-changed", readRoom as EventListener);
+    };
+  }, []);
+
   const nextMeta = useMemo<Meta>(() => {
     let section = '';
     let iconKey = 'home';
@@ -55,7 +68,7 @@ export default function HeaderTitle({ hideIcon = false, iconOnly = false }: Head
     else if (pathname.startsWith("/scan-item")) { section = 'Scan FFE'; iconKey = 'scanItem'; href = "/scan-item"; }
     else if (pathname.startsWith("/scan")) { section = 'Scan QR'; iconKey = 'scanQR'; href = "/scan"; }
     else if (pathname.startsWith("/box/")) {
-      section = 'Room';
+      section = activeRoomName || 'Room';
       iconKey = 'boxes';
       const parts = pathname.split("/").filter(Boolean);
       const code = parts[1] ? decodeURIComponent(parts[1]) : "";
@@ -64,7 +77,7 @@ export default function HeaderTitle({ hideIcon = false, iconOnly = false }: Head
     const main = activeProjectName?.trim() || "Projects";
     const title = section ? `${main}\n${section}` : main;
     return { title, iconKey, href };
-  }, [pathname, activeProjectName, activeBuildingName]);
+  }, [pathname, activeProjectName, activeBuildingName, activeRoomName]);
 
   const [prevMeta, setPrevMeta] = useState<Meta | null>(null);
   const [meta, setMeta] = useState<Meta>(nextMeta);

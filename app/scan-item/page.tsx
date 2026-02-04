@@ -11,7 +11,8 @@ type BoxRow = {
   id: string;
   code: string;
   name: string | null;
-  location?: { name: string } | null;
+  location_id: string | null;
+  location?: { name: string; project_id?: string | null } | null;
 };
 
 function safeFileName(name: string) {
@@ -101,7 +102,8 @@ function ScanItemInner() {
         id,
         code,
         name,
-        location:locations ( name )
+        location_id,
+        location:locations ( name, project_id )
       `
       )
       .eq("owner_id", userId)
@@ -231,7 +233,15 @@ function ScanItemInner() {
       return;
     }
 
+    const projectId = selectedBox.location?.project_id || null;
+    if (!projectId) {
+      setError("Project not found for this room.");
+      setBusy(false);
+      return;
+    }
+
     // 1) Create item first (no photo_url yet)
+    const safeQty = Math.max(1, Math.floor(Number(qty) || 1));
     const insertRes = await supabase
       .from("items")
       .insert({
@@ -239,7 +249,7 @@ function ScanItemInner() {
         box_id: selectedBox.id,
         name: name.trim(),
         description: desc.trim() ? desc.trim() : null,
-        quantity: Math.max(1, Math.floor(Number(qty) || 1)),
+        quantity: safeQty,
         condition,
         photo_url: null,
       })
@@ -254,7 +264,34 @@ function ScanItemInner() {
 
     const itemId = insertRes.data.id as string;
 
-    // 2) Upload photo to Supabase Storage
+    // 2) Create legacy codes for each unit
+    const lastCodeRes = await supabase
+      .from("item_units")
+      .select("legacy_code")
+      .eq("project_id", projectId)
+      .order("legacy_code", { ascending: false })
+      .limit(1);
+
+    const lastCode = lastCodeRes.data?.[0]?.legacy_code || "LEG0000";
+    const lastNum = Number(String(lastCode).replace(/\D+/g, "")) || 0;
+    const units = Array.from({ length: safeQty }, (_, i) => {
+      const nextNum = lastNum + i + 1;
+      const codeNum = String(nextNum).padStart(4, "0");
+      return {
+        item_id: itemId,
+        project_id: projectId,
+        legacy_code: `LEG${codeNum}`,
+      };
+    });
+
+    const unitsRes = await supabase.from("item_units").insert(units);
+    if (unitsRes.error) {
+      setError(unitsRes.error.message || "Failed to create legacy codes.");
+      setBusy(false);
+      return;
+    }
+
+    // 3) Upload photo to Supabase Storage
     const safe = safeFileName(capturedFile.name || "photo.jpg");
     const path = `${userId}/${itemId}/${Date.now()}-${safe}`;
 
