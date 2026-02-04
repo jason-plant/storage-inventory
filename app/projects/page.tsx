@@ -226,6 +226,7 @@ function ProjectsInner() {
   function openProject(p: ProjectRow) {
     try {
       localStorage.setItem("activeProjectId", p.id);
+      localStorage.setItem("activeProjectName", p.name);
       window.dispatchEvent(new Event("active-project-changed"));
     } catch {}
     router.push("/locations");

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
-import { useAuth } from "../lib/auth";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAppIcon } from "./Icons";
@@ -17,36 +16,42 @@ type HeaderTitleProps = {
 export default function HeaderTitle({ hideIcon = false, iconOnly = false }: HeaderTitleProps = {}) {
   const pathname = usePathname() || "/";
 
-  const { user } = useAuth();
-  const userName = user?.user_metadata?.name;
+  const [activeProjectName, setActiveProjectName] = useState<string>("");
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const readProject = () => setActiveProjectName(localStorage.getItem("activeProjectName") || "");
+    readProject();
+    window.addEventListener("storage", readProject);
+    window.addEventListener("active-project-changed", readProject as EventListener);
+    return () => {
+      window.removeEventListener("storage", readProject);
+      window.removeEventListener("active-project-changed", readProject as EventListener);
+    };
+  }, []);
+
   const nextMeta = useMemo<Meta>(() => {
     let section = '';
     let iconKey = 'home';
-    let href = "/locations";
-    if (pathname === "/" || pathname === "/locations") { section = 'Locations'; iconKey = 'locations'; href = "/locations"; }
-    else if (pathname.startsWith("/boxes")) { section = 'Boxes'; iconKey = 'boxes'; href = "/boxes"; }
+    let href = "/projects";
+    if (pathname === "/" || pathname === "/projects") { section = 'Projects'; iconKey = 'projects'; href = "/projects"; }
+    else if (pathname === "/locations") { section = 'Buildings'; iconKey = 'locations'; href = "/locations"; }
+    else if (pathname.startsWith("/locations/")) { section = 'Building'; iconKey = 'locations'; href = "/locations"; }
+    else if (pathname.startsWith("/boxes")) { section = 'Rooms'; iconKey = 'boxes'; href = "/boxes"; }
     else if (pathname.startsWith("/search")) { section = 'Search'; iconKey = 'search'; href = "/search"; }
     else if (pathname.startsWith("/labels")) { section = 'Labels'; iconKey = 'labels'; href = "/labels"; }
-    else if (pathname.startsWith("/scan-item")) { section = 'Scan Item'; iconKey = 'scanItem'; href = "/scan-item"; }
+    else if (pathname.startsWith("/scan-item")) { section = 'Scan FFE'; iconKey = 'scanItem'; href = "/scan-item"; }
     else if (pathname.startsWith("/scan")) { section = 'Scan QR'; iconKey = 'scanQR'; href = "/scan"; }
     else if (pathname.startsWith("/box/")) {
-      const parts = pathname.split("/").filter(Boolean);
-      section = parts[1] ? decodeURIComponent(parts[1]) : "Box";
+      section = 'Room';
       iconKey = 'boxes';
-      href = `/box/${encodeURIComponent(section)}`;
+      const parts = pathname.split("/").filter(Boolean);
+      const code = parts[1] ? decodeURIComponent(parts[1]) : "";
+      href = code ? `/box/${encodeURIComponent(code)}` : "/boxes";
     }
-    let title;
-    if (userName && userName.trim()) {
-      if (section) {
-        title = `${userName}'s Inventory\n${section}`;
-      } else {
-        title = `${userName}'s Inventory`;
-      }
-    } else {
-      title = section ? `Storage Inventory\n${section}` : 'Storage Inventory';
-    }
+    const main = activeProjectName?.trim() || "Projects";
+    const title = section ? `${main}\n${section}` : main;
     return { title, iconKey, href };
-  }, [pathname, userName]);
+  }, [pathname, activeProjectName]);
 
   const [prevMeta, setPrevMeta] = useState<Meta | null>(null);
   const [meta, setMeta] = useState<Meta>(nextMeta);
