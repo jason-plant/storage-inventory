@@ -17,6 +17,7 @@ export default function HeaderTitle({ hideIcon = false, iconOnly = false }: Head
   const pathname = usePathname() || "/";
 
   const [activeProjectName, setActiveProjectName] = useState<string>("");
+  const [activeBuildingName, setActiveBuildingName] = useState<string>("");
   useEffect(() => {
     if (typeof window === "undefined") return;
     const readProject = () => setActiveProjectName(localStorage.getItem("activeProjectName") || "");
@@ -29,13 +30,25 @@ export default function HeaderTitle({ hideIcon = false, iconOnly = false }: Head
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const readBuilding = () => setActiveBuildingName(localStorage.getItem("activeBuildingName") || "");
+    readBuilding();
+    window.addEventListener("storage", readBuilding);
+    window.addEventListener("active-building-changed", readBuilding as EventListener);
+    return () => {
+      window.removeEventListener("storage", readBuilding);
+      window.removeEventListener("active-building-changed", readBuilding as EventListener);
+    };
+  }, []);
+
   const nextMeta = useMemo<Meta>(() => {
     let section = '';
     let iconKey = 'home';
     let href = "/projects";
     if (pathname === "/" || pathname === "/projects") { section = 'Projects'; iconKey = 'projects'; href = "/projects"; }
     else if (pathname === "/locations") { section = 'Buildings'; iconKey = 'locations'; href = "/locations"; }
-    else if (pathname.startsWith("/locations/")) { section = 'Building'; iconKey = 'locations'; href = "/locations"; }
+    else if (pathname.startsWith("/locations/")) { section = activeBuildingName || 'Building'; iconKey = 'locations'; href = "/locations"; }
     else if (pathname.startsWith("/boxes")) { section = 'Rooms'; iconKey = 'boxes'; href = "/boxes"; }
     else if (pathname.startsWith("/search")) { section = 'Search'; iconKey = 'search'; href = "/search"; }
     else if (pathname.startsWith("/labels")) { section = 'Labels'; iconKey = 'labels'; href = "/labels"; }
@@ -51,7 +64,7 @@ export default function HeaderTitle({ hideIcon = false, iconOnly = false }: Head
     const main = activeProjectName?.trim() || "Projects";
     const title = section ? `${main}\n${section}` : main;
     return { title, iconKey, href };
-  }, [pathname, activeProjectName]);
+  }, [pathname, activeProjectName, activeBuildingName]);
 
   const [prevMeta, setPrevMeta] = useState<Meta | null>(null);
   const [meta, setMeta] = useState<Meta>(nextMeta);

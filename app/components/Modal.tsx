@@ -100,6 +100,8 @@ export default function Modal({
   const panelStyle: React.CSSProperties = {
     width: "100%",
     maxWidth: 520,
+    maxHeight: "calc(100dvh - 24px)",
+    overflow: "auto",
     background: "#fff",
     borderRadius: 18,
     border: "1px solid #e5e7eb",

@@ -127,6 +127,10 @@ function LocationInner() {
     }
 
     setLocation(locRes.data as LocationRow);
+      try {
+        localStorage.setItem("activeBuildingName", locRes.data.name ?? "");
+        window.dispatchEvent(new Event("active-building-changed"));
+      } catch {}
 
     const allLocRes = await supabase
       .from("locations")

@@ -236,6 +236,11 @@ function LocationsInner() {
             <a
               key={l.id}
               href={`/locations/${l.id}`}
+              onClick={() => {
+                try {
+                  localStorage.setItem("activeBuildingName", l.name);
+                } catch {}
+              }}
               style={{
                 background: "#fff",
                 border: "1px solid #e5e7eb",
