@@ -121,13 +121,18 @@ export default function SearchPage() {
         itemsByTextRes.error ||
         itemsByBoxRes.error;
 
+      const normalizeItem = (item: any): SearchItem => {
+        const boxValue = Array.isArray(item?.box) ? item.box[0] ?? null : item?.box ?? null;
+        return { ...item, box: boxValue } as SearchItem;
+      };
+
       if (firstError) {
         setError(firstError.message);
         setItems([]);
       } else {
         const merged = new Map<string, SearchItem>();
-        for (const item of (itemsByTextRes.data ?? []) as SearchItem[]) merged.set(item.id, item);
-        for (const item of (itemsByBoxRes.data ?? []) as SearchItem[]) merged.set(item.id, item);
+        for (const item of (itemsByTextRes.data ?? [])) merged.set(item.id, normalizeItem(item));
+        for (const item of (itemsByBoxRes.data ?? [])) merged.set(item.id, normalizeItem(item));
 
         const results = Array.from(merged.values()).sort((a, b) =>
           a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
