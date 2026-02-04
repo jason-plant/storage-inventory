@@ -79,7 +79,12 @@ export default function NewItemPage() {
       return;
     }
 
-    const projectId = boxRes.data.location?.project_id as string | undefined;
+    const boxData = boxRes.data as {
+      id: string;
+      location_id: string | null;
+      location?: { project_id?: string | null } | null;
+    } | null;
+    const projectId = boxData?.location?.project_id || undefined;
     if (!projectId) {
       setError("Project not found for this room.");
       setBusy(false);
