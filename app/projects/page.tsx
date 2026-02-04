@@ -29,6 +29,7 @@ function ProjectsInner() {
   const [error, setError] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [newName, setNewName] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   // edit modal
   const [editOpen, setEditOpen] = useState(false);
@@ -42,6 +43,12 @@ function ProjectsInner() {
   // blocked modal
   const [blockedOpen, setBlockedOpen] = useState(false);
   const blockedInfoRef = useRef<{ name: string; locationCount: number } | null>(null);
+
+  // options modal (long press)
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const optionsProjectRef = useRef<ProjectRow | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressTriggeredRef = useRef(false);
 
   async function load() {
     setLoading(true);
@@ -232,6 +239,142 @@ function ProjectsInner() {
     router.push("/locations");
   }
 
+  function startLongPress(p: ProjectRow) {
+    longPressTriggeredRef.current = false;
+    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      optionsProjectRef.current = p;
+      setOptionsOpen(true);
+    }, 550);
+  }
+
+  function clearLongPress() {
+    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = null;
+  }
+
+  async function exportLegacySurvey(p: ProjectRow) {
+    if (exporting) return;
+    setExporting(true);
+    setError(null);
+
+    try {
+      const locRes = await supabase
+        .from("locations")
+        .select("id, name")
+        .eq("project_id", p.id)
+        .order("name");
+      if (locRes.error) throw locRes.error;
+      const locations = locRes.data ?? [];
+      const locationIds = locations.map((l) => l.id);
+
+      const boxesRes = locationIds.length
+        ? await supabase
+            .from("boxes")
+            .select("id, code, name, location_id")
+            .in("location_id", locationIds)
+            .order("code")
+        : { data: [], error: null };
+      if (boxesRes.error) throw boxesRes.error;
+      const boxes = boxesRes.data ?? [];
+      const boxIds = boxes.map((b) => b.id);
+
+      const itemsRes = boxIds.length
+        ? await supabase
+            .from("items")
+            .select("id, name, description, quantity, condition, box_id, photo_url")
+            .in("box_id", boxIds)
+            .order("name")
+        : { data: [], error: null };
+      if (itemsRes.error) throw itemsRes.error;
+      const ffeItems = itemsRes.data ?? [];
+
+      const unitsRes = await supabase
+        .from("item_units")
+        .select("id, item_id, legacy_code")
+        .eq("project_id", p.id)
+        .order("legacy_code");
+      if (unitsRes.error) throw unitsRes.error;
+      const units = unitsRes.data ?? [];
+
+      const locationById = new Map(locations.map((l) => [l.id, l.name] as const));
+      const boxById = new Map(boxes.map((b) => [b.id, b] as const));
+      const itemById = new Map(ffeItems.map((i) => [i.id, i] as const));
+
+      const legacyRows = units.length
+        ? units.map((u, idx) => {
+            const it = itemById.get(u.item_id as string);
+            const box = it ? boxById.get((it as any).box_id) : undefined;
+            const buildingName = box?.location_id ? locationById.get(box.location_id) || "" : "";
+            return {
+              "No.": idx + 1,
+              "Legacy Code": u.legacy_code || "",
+              Building: buildingName,
+              "Room Number": box?.code || "",
+              "Room Name": box?.name || "",
+              Description: it?.name || "",
+              Quantity: 1,
+              "Item Type": "",
+              "DfE Code": "",
+              Condition: it?.condition ?? "",
+              "Life Expectancy": "",
+              "Make/Model": "",
+              Length: "",
+              Depth: "",
+              Height: "",
+              "Primary Colour": "",
+              "Secondary Colour": "",
+              "DfE Standard": "",
+              Comments: it?.description || "",
+              "Photograph Code": u.legacy_code || "",
+              "Carbon Saving (KG)": "",
+              Photograph: it?.photo_url || "",
+            };
+          })
+        : ffeItems.map((it, idx) => {
+            const box = boxById.get(it.box_id);
+            const buildingName = box?.location_id ? locationById.get(box.location_id) || "" : "";
+            return {
+              "No.": idx + 1,
+              "Legacy Code": "",
+              Building: buildingName,
+              "Room Number": box?.code || "",
+              "Room Name": box?.name || "",
+              Description: it.name || "",
+              Quantity: it.quantity ?? "",
+              "Item Type": "",
+              "DfE Code": "",
+              Condition: it.condition ?? "",
+              "Life Expectancy": "",
+              "Make/Model": "",
+              Length: "",
+              Depth: "",
+              Height: "",
+              "Primary Colour": "",
+              "Secondary Colour": "",
+              "DfE Standard": "",
+              Comments: it.description || "",
+              "Photograph Code": "",
+              "Carbon Saving (KG)": "",
+              Photograph: it.photo_url || "",
+            };
+          });
+
+      const { utils, writeFile } = await import("xlsx");
+      const wb = utils.book_new();
+      utils.book_append_sheet(wb, utils.json_to_sheet(legacyRows), "Legacy Survey");
+
+      const safeName = p.name.replace(/[\\/:*?"<>|]+/g, "-").trim() || "Project";
+      const dateTag = new Date().toISOString().slice(0, 10);
+      writeFile(wb, `${safeName}-legacy-survey-${dateTag}.xlsx`);
+    } catch (err: any) {
+      setError(err?.message || "Export failed.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <main style={{ paddingBottom: 90 }}>
       <h1 style={{ marginTop: 6, marginBottom: 6 }}>Projects</h1>
@@ -274,7 +417,17 @@ function ProjectsInner() {
           return (
             <div
               key={p.id}
-              onClick={() => openProject(p)}
+              onClick={() => {
+                if (longPressTriggeredRef.current) {
+                  longPressTriggeredRef.current = false;
+                  return;
+                }
+                openProject(p);
+              }}
+              onPointerDown={() => startLongPress(p)}
+              onPointerUp={() => clearLongPress()}
+              onPointerLeave={() => clearLongPress()}
+              onPointerCancel={() => clearLongPress()}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
@@ -313,6 +466,26 @@ function ProjectsInner() {
           );
         })}
       </div>
+
+      {/* Options modal */}
+      <Modal open={optionsOpen} title="Project options" onClose={() => setOptionsOpen(false)}>
+        <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ fontWeight: 800 }}>{optionsProjectRef.current?.name || "Project"}</div>
+          {error && <p style={{ color: "crimson", margin: 0 }}>Error: {error}</p>}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <button className="tap-btn" onClick={() => setOptionsOpen(false)} disabled={exporting}>Cancel</button>
+            <button
+              className="tap-btn primary"
+              onClick={() => {
+                if (optionsProjectRef.current) exportLegacySurvey(optionsProjectRef.current);
+              }}
+              disabled={exporting}
+            >
+              {exporting ? "Exporting…" : "Export legacy survey"}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Edit modal */}
       <Modal open={editOpen} title="Edit project" onClose={() => setEditOpen(false)}>

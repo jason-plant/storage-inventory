@@ -130,6 +130,12 @@ export default function BoxPage() {
   const [editQty, setEditQty] = useState<number>(0);
   const [editCondition, setEditCondition] = useState<number>(3);
   const [editRemovePhoto, setEditRemovePhoto] = useState(false);
+  const [unitModalOpen, setUnitModalOpen] = useState(false);
+  const [unitItem, setUnitItem] = useState<ItemRow | null>(null);
+  const [unitCodes, setUnitCodes] = useState<string[]>([]);
+  const [unitLoading, setUnitLoading] = useState(false);
+  const itemLongPressTimerRef = useRef<number | null>(null);
+  const itemLongPressTriggeredRef = useRef(false);
 
 
   // Photo inputs: choose OR take
@@ -362,6 +368,10 @@ export default function BoxPage() {
     }
 
     setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, quantity: safeQty } : i)));
+
+    if (safeQty !== (item.quantity ?? 0)) {
+      await ensureItemUnits(itemId, safeQty);
+    }
   }
 
   /* ============= Edit Item (name/desc/qty/photo replace) ============= */
@@ -489,6 +499,7 @@ export default function BoxPage() {
       photo_url: newPhotoUrl,
     };
 
+    const oldQty = it.quantity ?? 0;
     const res = await supabase
       .from("items")
       .update(updatePayload)
@@ -505,6 +516,10 @@ export default function BoxPage() {
 
     setItems((prev) => prev.map((x) => (x.id === it.id ? (res.data as ItemRow) : x)));
 
+    if (safeQty !== oldQty) {
+      await ensureItemUnits(it.id, safeQty);
+    }
+
 // clear dirty when edits are saved
       setDirty(false);
       setEditItemOpen(false);
@@ -512,6 +527,105 @@ export default function BoxPage() {
     setEditNewPhoto(null);
     setEditRemovePhoto(false);
     setBusy(false);
+  }
+
+  async function ensureItemUnits(itemId: string, desiredQty: number) {
+    if (!projectId || projectId === "__unassigned__") {
+      setError("Project not set for legacy codes.");
+      return;
+    }
+
+    const unitsRes = await supabase
+      .from("item_units")
+      .select("id, legacy_code, created_at")
+      .eq("item_id", itemId)
+      .order("created_at", { ascending: true });
+
+    if (unitsRes.error) {
+      setError(unitsRes.error.message);
+      return;
+    }
+
+    const units = unitsRes.data ?? [];
+    const current = units.length;
+
+    if (current === desiredQty) return;
+
+    if (current < desiredQty) {
+      const lastCodeRes = await supabase
+        .from("item_units")
+        .select("legacy_code")
+        .eq("project_id", projectId)
+        .order("legacy_code", { ascending: false })
+        .limit(1);
+
+      if (lastCodeRes.error) {
+        setError(lastCodeRes.error.message);
+        return;
+      }
+
+      const lastCode = lastCodeRes.data?.[0]?.legacy_code || "LEG0000";
+      const lastNum = Number(String(lastCode).replace(/\D+/g, "")) || 0;
+      const toCreate = desiredQty - current;
+      const newUnits = Array.from({ length: toCreate }, (_, i) => {
+        const nextNum = lastNum + i + 1;
+        return {
+          item_id: itemId,
+          project_id: projectId,
+          legacy_code: `LEG${String(nextNum).padStart(4, "0")}`,
+        };
+      });
+
+      const insertRes = await supabase.from("item_units").insert(newUnits);
+      if (insertRes.error) setError(insertRes.error.message);
+      return;
+    }
+
+    if (current > desiredQty) {
+      const toDelete = units
+        .slice(current - (current - desiredQty))
+        .map((u) => u.id as string);
+      if (toDelete.length === 0) return;
+      const delRes = await supabase.from("item_units").delete().in("id", toDelete);
+      if (delRes.error) setError(delRes.error.message);
+    }
+  }
+
+  function startItemLongPress(i: ItemRow) {
+    if (moveMode) return;
+    itemLongPressTriggeredRef.current = false;
+    if (itemLongPressTimerRef.current) window.clearTimeout(itemLongPressTimerRef.current);
+    itemLongPressTimerRef.current = window.setTimeout(() => {
+      itemLongPressTriggeredRef.current = true;
+      openItemDetails(i);
+    }, 550);
+  }
+
+  function clearItemLongPress() {
+    if (itemLongPressTimerRef.current) window.clearTimeout(itemLongPressTimerRef.current);
+    itemLongPressTimerRef.current = null;
+  }
+
+  async function openItemDetails(i: ItemRow) {
+    setUnitItem(i);
+    setUnitCodes([]);
+    setUnitLoading(true);
+    setUnitModalOpen(true);
+
+    const res = await supabase
+      .from("item_units")
+      .select("legacy_code")
+      .eq("item_id", i.id)
+      .order("legacy_code");
+
+    if (res.error) {
+      setError(res.error.message);
+      setUnitLoading(false);
+      return;
+    }
+
+    setUnitCodes((res.data ?? []).map((r) => r.legacy_code as string));
+    setUnitLoading(false);
   }
 
   /* ============= Move Mode ============= */
@@ -1001,6 +1115,10 @@ export default function BoxPage() {
                   onClick={() => {
                     if (moveMode) toggleSelected(i.id);
                   }}
+                  onPointerDown={() => startItemLongPress(i)}
+                  onPointerUp={() => clearItemLongPress()}
+                  onPointerLeave={() => clearItemLongPress()}
+                  onPointerCancel={() => clearItemLongPress()}
                   style={{
                     background: conditionBg,
                     border: moveMode ? (isSelected ? "2px solid #16a34a" : "2px solid #e5e7eb") : "1px solid #e5e7eb",
@@ -1298,6 +1416,47 @@ export default function BoxPage() {
               />
             </div>
           )}
+
+          <Modal
+            open={unitModalOpen}
+            title="FFE details"
+            onClose={() => {
+              if (unitLoading) return;
+              setUnitModalOpen(false);
+              setUnitItem(null);
+              setUnitCodes([]);
+            }}
+          >
+            {unitItem && (
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ fontWeight: 900 }}>{unitItem.name}</div>
+                {unitItem.description && <div style={{ opacity: 0.9 }}>{unitItem.description}</div>}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontSize: 13, opacity: 0.85 }}>
+                  <div>Quantity: <strong>{unitItem.quantity ?? 0}</strong></div>
+                  <div>Condition: <strong>{unitItem.condition ?? 3}</strong></div>
+                </div>
+
+                <div style={{ fontWeight: 800 }}>Legacy codes</div>
+                {unitLoading ? (
+                  <div>Loading…</div>
+                ) : unitCodes.length === 0 ? (
+                  <div style={{ opacity: 0.75 }}>No legacy codes yet.</div>
+                ) : (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {unitCodes.map((c) => (
+                      <span key={c} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #e5e7eb", background: "#fff", fontWeight: 700 }}>
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+              <button className="tap-btn" onClick={() => setUnitModalOpen(false)} disabled={unitLoading}>Close</button>
+            </div>
+          </Modal>
 
           {/* ✅ Edit Item Modal (with Take Photo + Choose File) */}
           <Modal
