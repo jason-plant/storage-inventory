@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="manifest" href="/site.webmanifest" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-180.png" />
-        <meta name="theme-color" content="#333333" />
+        <meta name="theme-color" content="#093649" />
       </head>
       <body
         style={{
@@ -48,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <UnsavedChangesProvider>
             <style>{`
             :root{
-              --border:#e5e7eb;
+              --border: var(--border);
               --shadow: 0 1px 10px rgba(0,0,0,0.06);
             }
 
@@ -61,7 +61,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }
 
             button {
-              background: #fff;
+              background: var(--surface);
+              color: var(--text);
               font-weight: 800;
               cursor: pointer;
               box-shadow: var(--shadow);
@@ -93,9 +94,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 position: "sticky",
                 top: 0,
                 zIndex: 100,
-                background: "rgba(246,247,251,0.92)",
+                background: "color-mix(in srgb, var(--surface) 92%, transparent)",
                 backdropFilter: "blur(10px)",
-                borderBottom: "1px solid #eaeaea",
+                borderBottom: "1px solid var(--border)",
               }}
             >
               <div

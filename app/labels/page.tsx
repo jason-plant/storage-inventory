@@ -387,7 +387,7 @@ export default function LabelsPage() {
           <h1 className="sr-only" style={{ margin: 0 }}>QR Labels</h1>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "stretch", position: "relative" }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <button
                   type="button"
@@ -416,13 +416,14 @@ export default function LabelsPage() {
                   </label>
                 </div>
               </div>
-
-              {showHint && (
-                <div style={{ background: "#111", color: "#fff", padding: "8px 12px", borderRadius: 8, boxShadow: "0 6px 24px rgba(0,0,0,0.16)", fontSize: 13 }}>
-                  Long-press a label to select multiple. <button onClick={dismissHint} style={{ marginLeft: 8, background: "transparent", color: "#fff", border: "none", fontWeight: 800, cursor: "pointer" }}>Got it</button>
-                </div>
-              )}
             </div>
+
+            {showHint && (
+              <div style={{ background: "#111", color: "#fff", padding: "8px 12px", borderRadius: 8, boxShadow: "0 6px 24px rgba(0,0,0,0.16)", fontSize: 13, alignSelf: "stretch" }}>
+                Long-press a label to select multiple.
+                <button onClick={dismissHint} style={{ marginLeft: 8, background: "transparent", color: "#fff", border: "none", fontWeight: 800, cursor: "pointer" }}>Got it</button>
+              </div>
+            )}
 
             {selected.length > 0 && (
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-start", marginTop: 2 }}>

@@ -23,7 +23,9 @@ const SRC = path.join(ROOT, "public", "source", "logo-master.png");
 const PREVIEW_DIR = path.join(ROOT, "public", "icon-previews");
 const ICONS_DIR = path.join(ROOT, "public", "icons");
 
-const BG = process.env.ICON_BG || "#333333"; // dark grey default
+const BG = process.env.ICON_BG || "transparent"; // transparent default
+const IS_TRANSPARENT_BG =
+  BG === "transparent" || BG === "none" || BG === "rgba(0,0,0,0)" || BG === "#00000000";
 
 async function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -76,7 +78,7 @@ async function run() {
     await square.clone().resize(432, 432).png().toFile(path.join(PREVIEW_DIR, "adaptive-foreground.png"));
   }
 
-  // 3) Adaptive background (solid dark grey)
+  // 3) Adaptive background (transparent by default)
   const bgImage = sharp({
     create: {
       width: 432,
@@ -87,13 +89,10 @@ async function run() {
   }).png();
   await bgImage.toFile(path.join(PREVIEW_DIR, "adaptive-background.png"));
 
-  // 4) Solid-background thumbnail (192x192)
-  await square
-    .clone()
-    .resize(192, 192, { fit: "contain", background: BG })
-    .flatten({ background: BG })
-    .png({ quality: 90 })
-    .toFile(path.join(PREVIEW_DIR, "solid-dark.png"));
+  // 4) Solid-background thumbnail (192x192) - transparent by default
+  const solidThumb = square.clone().resize(192, 192, { fit: "contain", background: BG });
+  const solidThumbOut = IS_TRANSPARENT_BG ? solidThumb : solidThumb.flatten({ background: BG });
+  await solidThumbOut.png({ quality: 90 }).toFile(path.join(PREVIEW_DIR, "solid-dark.png"));
 
   // Generate common icons (from square crop)
   const iconSizes = {
@@ -105,12 +104,9 @@ async function run() {
   };
 
   for (const [name, s] of Object.entries(iconSizes)) {
-    await square
-      .clone()
-      .resize(s, s, { fit: "contain", background: BG })
-      .flatten({ background: BG })
-      .png({ quality: 90 })
-      .toFile(path.join(ICONS_DIR, name));
+    const resized = square.clone().resize(s, s, { fit: "contain", background: BG });
+    const out = IS_TRANSPARENT_BG ? resized : resized.flatten({ background: BG });
+    await out.png({ quality: 90 }).toFile(path.join(ICONS_DIR, name));
   }
 
   // Create site.webmanifest

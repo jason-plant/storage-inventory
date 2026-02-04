@@ -51,13 +51,18 @@
 @import "tailwindcss";
 
 :root {
-  /* Default palette: Stone (light) */
-  --bg: #F4F6F7;
-  --surface: #FBFCFD;
-  --border: #DDE2E6;
-  --text: #1F2933;
-  --muted: #6B7280;
-  --accent: #6B8FA3;
+  /* Brand colors (from logo) */
+  --brand-teal: #093649;
+  --brand-pink: #f86483;
+
+  /* Light theme */
+  --bg: #f1f7f9;
+  --surface: #ffffff;
+  --border: #d3e4ea;
+  --text: #0c1f2a;
+  --muted: #3c6474;
+  --accent: var(--brand-pink);
+  --accent-2: var(--brand-teal);
 
   /* backwards compat */
   --background: var(--bg);
@@ -66,12 +71,13 @@
 
 /* dark theme overrides (applies when [data-theme="dark"] is set on <html>) */
 :root[data-theme="dark"] {
-  --bg: #0b1220;
-  --surface: #0f1724;
-  --border: #1f2a37;
-  --text: #e6eef6;
-  --muted: #9aa6b2;
-  --accent: #5b90a6;
+  --bg: #061b24;
+  --surface: #0b2430;
+  --border: #123241;
+  --text: #e7f1f5;
+  --muted: #a8c1cc;
+  --accent: var(--brand-pink);
+  --accent-2: #0f4a63;
 }
 
 @theme inline {
@@ -126,13 +132,13 @@ body {
 .tap-btn,
 .nav-btn {
   appearance: none;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 10px 14px;
   font-size: 14px;
   font-weight: 800;
-  color: #111;
+  color: var(--text);
   text-decoration: none;
   cursor: pointer;
   box-shadow: 0 1px 10px rgba(0,0,0,0.06);
@@ -151,9 +157,9 @@ body {
 
 .tap-btn.primary,
 .nav-btn.primary {
-  background: #111;
+  background: var(--accent);
   color: #fff;
-  border-color: #111;
+  border-color: var(--accent);
 }
 
 .tap-btn.danger {
@@ -168,9 +174,9 @@ body {
 /* ===== Active / selected nav button ===== */
 
 .nav-btn.active {
-  background: #24afe1;
+  background: var(--accent-2);
   color: #fff;
-  border-color: #24afe1;
+  border-color: var(--accent-2);
   box-shadow: 0 4px 16px rgba(0,0,0,0.25);
 }
 

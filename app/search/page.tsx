@@ -56,47 +56,83 @@ export default function SearchPage() {
         return;
       }
 
-      // ✅ Pull location via boxes.location_id -> locations.name
-
-      // Search for items where the query matches item name, box code, box name, or location name
-      // Only search item name in the query, filter other fields client-side
-      const res = await supabase
-        .from("items")
-        .select(`
-          id,
+      const like = `%${q}%`;
+      const itemSelect = `
+        id,
+        name,
+        description,
+        photo_url,
+        quantity,
+        box:boxes (
+          code,
           name,
-          description,
-          photo_url,
-          quantity,
-          box:boxes (
-            code,
-            name,
-            location:locations ( name )
-          )
-        `)
-        .eq("owner_id", userId)
-        .limit(200);
+          location:locations ( name )
+        )
+      `;
 
-      if (res.error) {
-        setError(res.error.message);
+      // 1) Find matching locations
+      const locRes = await supabase
+        .from("locations")
+        .select("id")
+        .eq("owner_id", userId)
+        .ilike("name", like);
+
+      // 2) Find boxes that match box code/name OR belong to a matching location
+      const boxesByTextRes = await supabase
+        .from("boxes")
+        .select("id")
+        .eq("owner_id", userId)
+        .or(`code.ilike.${like},name.ilike.${like}`);
+
+      const locationIds = (locRes.data ?? []).map((l) => l.id);
+      const boxesByLocationRes = locationIds.length
+        ? await supabase
+            .from("boxes")
+            .select("id")
+            .eq("owner_id", userId)
+            .in("location_id", locationIds)
+        : { data: [], error: null };
+
+      const boxIds = new Set<string>();
+      for (const b of boxesByTextRes.data ?? []) boxIds.add(b.id);
+      for (const b of boxesByLocationRes.data ?? []) boxIds.add(b.id);
+
+      // 3) Find items by item name/description
+      const itemsByTextRes = await supabase
+        .from("items")
+        .select(itemSelect)
+        .eq("owner_id", userId)
+        .or(`name.ilike.${like},description.ilike.${like}`);
+
+      // 4) Find items that live in matched boxes
+      const boxIdList = Array.from(boxIds);
+      const itemsByBoxRes = boxIdList.length
+        ? await supabase
+            .from("items")
+            .select(itemSelect)
+            .eq("owner_id", userId)
+            .in("box_id", boxIdList)
+        : { data: [], error: null };
+
+      const firstError =
+        locRes.error ||
+        boxesByTextRes.error ||
+        boxesByLocationRes.error ||
+        itemsByTextRes.error ||
+        itemsByBoxRes.error;
+
+      if (firstError) {
+        setError(firstError.message);
         setItems([]);
       } else {
-        // Filter by item name, box code, box name, and location name client-side
-        let results = (res.data ?? []) as unknown as SearchItem[];
-        if (q) {
-          const qLower = q.toLowerCase();
-          results = results.filter(item => {
-            const locName = item.box?.location?.name?.toLowerCase() || "";
-            const desc = item.description?.toLowerCase() || "";
-            return (
-              item.name?.toLowerCase().includes(qLower) ||
-              desc.includes(qLower) ||
-              item.box?.code?.toLowerCase().includes(qLower) ||
-              item.box?.name?.toLowerCase().includes(qLower) ||
-              locName.includes(qLower)
-            );
-          });
-        }
+        const merged = new Map<string, SearchItem>();
+        for (const item of (itemsByTextRes.data ?? []) as SearchItem[]) merged.set(item.id, item);
+        for (const item of (itemsByBoxRes.data ?? []) as SearchItem[]) merged.set(item.id, item);
+
+        const results = Array.from(merged.values()).sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+        );
+
         setItems(results);
       }
 
@@ -114,7 +150,7 @@ export default function SearchPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search item name..."
+          placeholder="Search items, descriptions, boxes, or locations..."
           style={{ width: "100%", marginTop: 10 }}
         />
 
