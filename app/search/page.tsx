@@ -28,10 +28,17 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<SearchItem[]>([]);
+  const [projectId, setProjectId] = useState<string>("");
 
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<SearchItem | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("activeProjectId") || "";
+    setProjectId(stored);
+  }, []);
 
   useEffect(() => {
     const q = query.trim();
@@ -57,6 +64,7 @@ export default function SearchPage() {
       }
 
       const like = `%${q}%`;
+      const activeProjectId = projectId && projectId !== "__unassigned__" ? projectId : "";
       const itemSelect = `
         id,
         name,
@@ -70,19 +78,60 @@ export default function SearchPage() {
         )
       `;
 
-      // 1) Find matching locations
-      const locRes = await supabase
+      // 1) Find matching locations (scoped to project when active)
+      let locQuery = supabase
         .from("locations")
         .select("id")
         .eq("owner_id", userId)
         .ilike("name", like);
 
-      // 2) Find boxes that match box code/name OR belong to a matching location
-      const boxesByTextRes = await supabase
-        .from("boxes")
-        .select("id")
-        .eq("owner_id", userId)
-        .or(`code.ilike.${like},name.ilike.${like}`);
+      if (activeProjectId) {
+        locQuery = locQuery.eq("project_id", activeProjectId);
+      }
+
+      const locRes = await locQuery;
+
+      // 2) Find boxes in active project (if any)
+      let projectLocationIds: string[] = [];
+      let projectBoxIds: string[] = [];
+      let projectLocRes: { data: any[] | null; error: any } = { data: null, error: null };
+      let projectBoxesRes: { data: any[] | null; error: any } = { data: null, error: null };
+
+      if (activeProjectId) {
+        projectLocRes = await supabase
+          .from("locations")
+          .select("id")
+          .eq("owner_id", userId)
+          .eq("project_id", activeProjectId);
+
+        projectLocationIds = (projectLocRes.data ?? []).map((l) => l.id);
+
+        if (projectLocationIds.length) {
+          projectBoxesRes = await supabase
+            .from("boxes")
+            .select("id")
+            .eq("owner_id", userId)
+            .in("location_id", projectLocationIds);
+
+          projectBoxIds = (projectBoxesRes.data ?? []).map((b) => b.id);
+        } else {
+          projectBoxesRes = { data: [], error: null };
+        }
+      }
+
+      // 3) Find boxes that match box code/name OR belong to a matching location
+      let boxesByTextRes: { data: any[] | null; error: any } = { data: [], error: null };
+      if (!activeProjectId || projectLocationIds.length) {
+        let boxQuery = supabase
+          .from("boxes")
+          .select("id")
+          .eq("owner_id", userId)
+          .or(`code.ilike.${like},name.ilike.${like}`);
+
+        if (activeProjectId) boxQuery = boxQuery.in("location_id", projectLocationIds);
+
+        boxesByTextRes = await boxQuery;
+      }
 
       const locationIds = (locRes.data ?? []).map((l) => l.id);
       const boxesByLocationRes = locationIds.length
@@ -97,25 +146,38 @@ export default function SearchPage() {
       for (const b of boxesByTextRes.data ?? []) boxIds.add(b.id);
       for (const b of boxesByLocationRes.data ?? []) boxIds.add(b.id);
 
-      // 3) Find items by item name/description
-      const itemsByTextRes = await supabase
-        .from("items")
-        .select(itemSelect)
-        .eq("owner_id", userId)
-        .or(`name.ilike.${like},description.ilike.${like}`);
+      // 4) Find items by item name/description
+      let itemsByTextRes: { data: any[] | null; error: any } = { data: [], error: null };
+      if (!activeProjectId || projectBoxIds.length) {
+        let itemsQuery = supabase
+          .from("items")
+          .select(itemSelect)
+          .eq("owner_id", userId)
+          .or(`name.ilike.${like},description.ilike.${like}`);
 
-      // 4) Find items that live in matched boxes
+        if (activeProjectId) itemsQuery = itemsQuery.in("box_id", projectBoxIds);
+
+        itemsByTextRes = await itemsQuery;
+      }
+
+      // 5) Find items that live in matched boxes
       const boxIdList = Array.from(boxIds);
-      const itemsByBoxRes = boxIdList.length
+      const scopedBoxIdList = activeProjectId && projectBoxIds.length
+        ? boxIdList.filter((id) => projectBoxIds.includes(id))
+        : boxIdList;
+
+      const itemsByBoxRes = scopedBoxIdList.length
         ? await supabase
             .from("items")
             .select(itemSelect)
             .eq("owner_id", userId)
-            .in("box_id", boxIdList)
+            .in("box_id", scopedBoxIdList)
         : { data: [], error: null };
 
       const firstError =
         locRes.error ||
+        projectLocRes.error ||
+        projectBoxesRes.error ||
         boxesByTextRes.error ||
         boxesByLocationRes.error ||
         itemsByTextRes.error ||
@@ -145,7 +207,7 @@ export default function SearchPage() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, projectId]);
 
   return (
     <RequireAuth>

@@ -54,6 +54,7 @@ export default function BurgerMenu() {
   const { user, signOut } = useAuth();
 
   const [open, setOpen] = useState(false);
+  const [activeProjectId, setActiveProjectId] = useState<string>("");
 
   // Interactive swipe state
   const [swipeX, setSwipeX] = useState<number | null>(null);
@@ -156,6 +157,14 @@ export default function BurgerMenu() {
   // portal ready after mount
   useEffect(() => setPortalReady(true), []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const readProject = () => setActiveProjectId(localStorage.getItem("activeProjectId") || "");
+    readProject();
+    window.addEventListener("storage", readProject);
+    return () => window.removeEventListener("storage", readProject);
+  }, []);
+
   // Mount/unmount for animation
   useEffect(() => {
     if (open) {
@@ -198,16 +207,19 @@ export default function BurgerMenu() {
 
   const items = useMemo(() => {
     if (!user) return [];
+    const hasProject = Boolean(activeProjectId);
     return [
       { label: "Projects", href: "/projects", icon: useAppIcon("projects") },
-      { label: "Locations", href: "/locations", icon: useAppIcon("locations") },
-      { label: "Boxes", href: "/boxes", icon: useAppIcon("boxes") },
-      { label: "Search", href: "/search", icon: useAppIcon("search") },
-      { label: "Labels", href: "/labels", icon: useAppIcon("labels") },
-      { label: "Scan QR", href: "/scan", icon: useAppIcon("scanQR") },
-      { label: "Scan Item", href: "/scan-item", icon: useAppIcon("scanItem") },
+      ...(hasProject ? [
+        { label: "Locations", href: "/locations", icon: useAppIcon("locations") },
+        { label: "Boxes", href: "/boxes", icon: useAppIcon("boxes") },
+        { label: "Search", href: "/search", icon: useAppIcon("search") },
+        { label: "Labels", href: "/labels", icon: useAppIcon("labels") },
+        { label: "Scan QR", href: "/scan", icon: useAppIcon("scanQR") },
+        { label: "Scan Item", href: "/scan-item", icon: useAppIcon("scanItem") },
+      ] : []),
     ];
-  }, [user]);
+  }, [user, activeProjectId]);
 
   function go(href: string) {
     setOpen(false);

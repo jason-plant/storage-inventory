@@ -60,11 +60,12 @@ export default function BackButton({ fallback = "/locations" }: { fallback?: str
       </button>
 
       <Modal open={showConfirm} title="Discard changes?" onClose={() => setShowConfirm(false)}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{ flex: 1 }}>You have unsaved changes. Discard and go back?</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => setShowConfirm(false)}>Cancel</button>
+        <div style={{ display: "grid", gap: 12 }}>
+          <div>You have unsaved changes. Discard and go back?</div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+            <button className="tap-btn" onClick={() => setShowConfirm(false)}>Cancel</button>
             <button
+              className="tap-btn danger"
               onClick={() => {
                 setShowConfirm(false);
                 setDirty(false);
@@ -74,7 +75,6 @@ export default function BackButton({ fallback = "/locations" }: { fallback?: str
                   router.push(fallback);
                 }
               }}
-              style={{ background: "#ef4444", color: "#fff" }}
             >
               Discard
             </button>
