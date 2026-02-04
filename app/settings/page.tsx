@@ -153,12 +153,12 @@ export default function SettingsPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
                   {[
                     { key: 'projects', label: 'Projects' },
-                    { key: 'locations', label: 'Locations' },
-                    { key: 'boxes', label: 'Boxes' },
+                    { key: 'locations', label: 'Buildings' },
+                    { key: 'boxes', label: 'Rooms' },
                     { key: 'search', label: 'Search' },
                     { key: 'labels', label: 'Labels' },
                     { key: 'scanQR', label: 'Scan QR' },
-                    { key: 'scanItem', label: 'Scan Item' },
+                    { key: 'scanItem', label: 'Scan FFE' },
                     { key: 'home', label: 'Home' },
                     { key: 'edit', label: 'Edit' },
                     { key: 'delete', label: 'Delete' },

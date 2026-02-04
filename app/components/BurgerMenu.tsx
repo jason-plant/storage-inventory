@@ -162,7 +162,11 @@ export default function BurgerMenu() {
     const readProject = () => setActiveProjectId(localStorage.getItem("activeProjectId") || "");
     readProject();
     window.addEventListener("storage", readProject);
-    return () => window.removeEventListener("storage", readProject);
+    window.addEventListener("active-project-changed", readProject as EventListener);
+    return () => {
+      window.removeEventListener("storage", readProject);
+      window.removeEventListener("active-project-changed", readProject as EventListener);
+    };
   }, []);
 
   // Mount/unmount for animation
@@ -207,19 +211,23 @@ export default function BurgerMenu() {
 
   const items = useMemo(() => {
     if (!user) return [];
-    const hasProject = Boolean(activeProjectId);
+    const hasProject = Boolean(activeProjectId) && activeProjectId !== "__unassigned__";
     return [
       { label: "Projects", href: "/projects", icon: useAppIcon("projects") },
       ...(hasProject ? [
-        { label: "Locations", href: "/locations", icon: useAppIcon("locations") },
-        { label: "Boxes", href: "/boxes", icon: useAppIcon("boxes") },
+        { label: "Buildings", href: "/locations", icon: useAppIcon("locations") },
+        { label: "Rooms", href: "/boxes", icon: useAppIcon("boxes") },
         { label: "Search", href: "/search", icon: useAppIcon("search") },
         { label: "Labels", href: "/labels", icon: useAppIcon("labels") },
         { label: "Scan QR", href: "/scan", icon: useAppIcon("scanQR") },
-        { label: "Scan Item", href: "/scan-item", icon: useAppIcon("scanItem") },
+        { label: "Scan FFE", href: "/scan-item", icon: useAppIcon("scanItem") },
       ] : []),
     ];
   }, [user, activeProjectId]);
+
+  if (user && (!activeProjectId || activeProjectId === "__unassigned__")) {
+    return null;
+  }
 
   function go(href: string) {
     setOpen(false);

@@ -29,7 +29,7 @@ export default function NewItemPage() {
 
   async function save() {
     if (!name.trim()) {
-      setError("Item name is required.");
+      setError("FFE name is required.");
       return;
     }
 
@@ -41,7 +41,7 @@ export default function NewItemPage() {
     const user = userRes.data.user;
 
     if (!user) {
-      setError("You must be logged in to add items.");
+      setError("You must be logged in to add FFE.");
       setBusy(false);
       return;
     }
@@ -54,7 +54,7 @@ export default function NewItemPage() {
       .maybeSingle();
 
     if (!boxRes.data || boxRes.error) {
-      setError("Box not found.");
+      setError("Room not found.");
       setBusy(false);
       return;
     }
@@ -72,7 +72,7 @@ export default function NewItemPage() {
       .single();
 
     if (insertRes.error || !insertRes.data) {
-      setError(insertRes.error?.message || "Failed to create item.");
+      setError(insertRes.error?.message || "Failed to create FFE.");
       setBusy(false);
       return;
     }
@@ -146,7 +146,7 @@ export default function NewItemPage() {
             boxShadow: "0 1px 10px rgba(0,0,0,0.06)",
           }}
         >
-          <h1 className="sr-only" style={{ marginTop: 6 }}>Add Item</h1>
+          <h1 className="sr-only" style={{ marginTop: 6 }}>Add FFE</h1>
           <p style={{ opacity: 0.85, marginTop: 0 }}>
             Adding to <strong>{code}</strong>
           </p>
@@ -155,7 +155,7 @@ export default function NewItemPage() {
 
           <div style={{ display: "grid", gap: 12 }}>
             <input
-              placeholder="Item name"
+              placeholder="FFE name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoFocus
@@ -220,7 +220,7 @@ export default function NewItemPage() {
               </button>
 
               <button onClick={save} disabled={busy} style={{ background: "#111", color: "#fff" }}>
-                {busy ? "Saving..." : "Save item"}
+                {busy ? "Saving..." : "Save FFE"}
               </button>
             </div>
           </div>

@@ -27,8 +27,8 @@ export function DeleteItemButton({ itemId, onDeleted }: { itemId: string, onDele
   return (
     <span style={{ display: "inline-flex", alignItems: "center" }}>
       <DeleteIconButton onClick={() => setModalOpen(true)} disabled={busy} />
-      <Modal open={modalOpen} title="Delete item?" onClose={() => setModalOpen(false)} anchor="center">
-        <div style={{ marginBottom: 18 }}>Are you sure you want to delete this item?</div>
+      <Modal open={modalOpen} title="Delete FFE?" onClose={() => setModalOpen(false)} anchor="center">
+        <div style={{ marginBottom: 18 }}>Are you sure you want to delete this FFE?</div>
         {error && <div style={{ color: "crimson", marginBottom: 10 }}>{error}</div>}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <button type="button" onClick={() => setModalOpen(false)} disabled={busy}>Cancel</button>

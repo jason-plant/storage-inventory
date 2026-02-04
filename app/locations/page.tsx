@@ -45,7 +45,7 @@ function LocationsInner() {
   const [blockedOpen, setBlockedOpen] = useState(false);
   const blockedInfoRef = useRef<{ name: string; boxCount: number } | null>(null);
 
-  // ✅ edit modal (rename location)
+  // ✅ edit modal (rename building)
   const [editOpen, setEditOpen] = useState(false);
   const editLocRef = useRef<LocationRow | null>(null);
   const [editName, setEditName] = useState("");
@@ -137,7 +137,7 @@ function LocationsInner() {
 
     const trimmed = editName.trim();
     if (!trimmed) {
-      setError("Location name is required.");
+      setError("Building name is required.");
       return;
     }
 
@@ -162,7 +162,7 @@ function LocationsInner() {
       .single();
 
     if (res.error || !res.data) {
-      setError(res.error?.message || "Failed to update location.");
+      setError(res.error?.message || "Failed to update building.");
       setBusy(false);
       return;
     }
@@ -194,7 +194,7 @@ function LocationsInner() {
       return;
     }
 
-    // check if location has boxes
+    // check if building has rooms
     const boxesRes = await supabase
       .from("boxes")
       .select("id", { count: "exact", head: true })
@@ -239,8 +239,8 @@ function LocationsInner() {
 
   return (
     <main style={{ paddingBottom: 90 }}>
-      <h1 className="sr-only" style={{ marginTop: 6 }}>Locations</h1>
-      <p style={{ marginTop: 0, opacity: 0.75 }}>Choose a location to view its boxes.</p>
+      <h1 className="sr-only" style={{ marginTop: 6 }}>Buildings</h1>
+      <p style={{ marginTop: 0, opacity: 0.75 }}>Choose a building to view its rooms.</p>
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
         <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -252,6 +252,7 @@ function LocationsInner() {
               setProjectId(value);
               try {
                 localStorage.setItem("activeProjectId", value);
+                window.dispatchEvent(new Event("active-project-changed"));
               } catch {}
             }}
           >
@@ -268,7 +269,7 @@ function LocationsInner() {
 
       {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
       {loading && <p>Loading…</p>}
-      {!loading && locations.length === 0 && <p>No locations yet.</p>}
+      {!loading && locations.length === 0 && <p>No buildings yet.</p>}
 
       <div style={{ display: "grid", gap: 10 }}>
         {locations.map((l) => {
@@ -307,7 +308,7 @@ function LocationsInner() {
                     fontWeight: 800,
                   }}
                 >
-                  {boxCount} box{boxCount === 1 ? "" : "es"}
+                  {boxCount} room{boxCount === 1 ? "" : "s"}
                 </div>
               </div>
 
@@ -319,7 +320,7 @@ function LocationsInner() {
                     e.stopPropagation();
                   }}
                 >
-                  <EditIconButton title="Edit location" disabled={busy} onClick={() => openEdit(l)} />
+                  <EditIconButton title="Edit building" disabled={busy} onClick={() => openEdit(l)} />
                 </span>
 
                 {/* ✅ Delete icon (does NOT open the location) */}
@@ -329,7 +330,7 @@ function LocationsInner() {
                     e.stopPropagation();
                   }}
                 >
-                  <DeleteIconButton title="Delete location" disabled={busy} onClick={() => requestDelete(l)} />
+                  <DeleteIconButton title="Delete building" disabled={busy} onClick={() => requestDelete(l)} />
                 </span>
               </div>
             </a>
@@ -337,10 +338,10 @@ function LocationsInner() {
         })}
       </div>
 
-      {/* FAB: Add Location */}
+      {/* FAB: Add Building */}
       <a
         href={projectId && projectId !== "__unassigned__" ? `/locations/new?projectId=${encodeURIComponent(projectId)}` : "/locations/new"}
-        aria-label="Add location"
+        aria-label="Add building"
         style={{
           position: "fixed",
           right: 18,
@@ -380,7 +381,7 @@ function LocationsInner() {
       {/* EDIT modal */}
       <Modal
         open={editOpen}
-        title="Rename location"
+        title="Rename building"
         onClose={() => {
           if (busy) return;
           setEditOpen(false);
@@ -388,9 +389,9 @@ function LocationsInner() {
           setEditName("");
         }}
       >
-        <p style={{ marginTop: 0, opacity: 0.85 }}>Fix spelling or rename this location.</p>
+        <p style={{ marginTop: 0, opacity: 0.85 }}>Fix spelling or rename this building.</p>
 
-        <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Location name" autoFocus />
+        <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Building name" autoFocus />
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
@@ -415,17 +416,17 @@ function LocationsInner() {
       {/* Blocked modal */}
       <Modal
         open={blockedOpen}
-        title="Unable to delete location"
+        title="Unable to delete building"
         onClose={() => {
           setBlockedOpen(false);
           blockedInfoRef.current = null;
         }}
       >
         <p style={{ marginTop: 0 }}>
-          <strong>{blockedInfoRef.current?.name ?? "This location"}</strong> can’t be deleted because it still contains{" "}
-          <strong>{blockedInfoRef.current?.boxCount ?? 0}</strong> box(es).
+          <strong>{blockedInfoRef.current?.name ?? "This building"}</strong> can’t be deleted because it still contains{" "}
+          <strong>{blockedInfoRef.current?.boxCount ?? 0}</strong> room(s).
         </p>
-        <p style={{ marginTop: 0, opacity: 0.85 }}>Move or delete the boxes first, then try again.</p>
+        <p style={{ marginTop: 0, opacity: 0.85 }}>Move or delete the rooms first, then try again.</p>
 
         <button
           type="button"
@@ -442,7 +443,7 @@ function LocationsInner() {
       {/* Delete modal */}
       <Modal
         open={confirmDeleteOpen}
-        title="Delete location?"
+        title="Delete building?"
         onClose={() => {
           if (busy) return;
           setConfirmDeleteOpen(false);
@@ -450,7 +451,7 @@ function LocationsInner() {
         }}
       >
         <p style={{ marginTop: 0 }}>
-          Delete <strong>{locToDeleteRef.current?.name ?? "this location"}</strong>?
+          Delete <strong>{locToDeleteRef.current?.name ?? "this building"}</strong>?
         </p>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>

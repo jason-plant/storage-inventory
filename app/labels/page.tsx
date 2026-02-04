@@ -227,18 +227,18 @@ export default function LabelsPage() {
       }
 
       if ((navigator as any).share && files.length) {
-        await (navigator as any).share({ files, title: "Box labels" });
+        await (navigator as any).share({ files, title: "Room labels" });
       } else if ((navigator as any).share) {
-        await (navigator as any).share({ title: "Box labels", text: `Boxes: ${selected.join(", ")}` });
+        await (navigator as any).share({ title: "Room labels", text: `Rooms: ${selected.join(", ")}` });
       } else {
-        await navigator.clipboard.writeText(`Boxes: ${selected.join(", ")}`);
-        alert("Copied box list to clipboard (share fallback)");
+        await navigator.clipboard.writeText(`Rooms: ${selected.join(", ")}`);
+        alert("Copied room list to clipboard (share fallback)");
       }
     } catch (err) {
       console.warn(err);
       try {
-        await navigator.clipboard.writeText(`Boxes: ${selected.join(", ")}`);
-        alert("Copied box list to clipboard (share fallback)");
+        await navigator.clipboard.writeText(`Rooms: ${selected.join(", ")}`);
+        alert("Copied room list to clipboard (share fallback)");
       } catch (e) {
         alert("Share not available in this browser");
       }
@@ -443,10 +443,10 @@ export default function LabelsPage() {
           </div>
         </div>
 
-        {loading && <p>Loading boxes…</p>}
+        {loading && <p>Loading rooms…</p>}
         {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
 
-        {!loading && !error && boxes.length === 0 && <p>No boxes found.</p>}
+        {!loading && !error && boxes.length === 0 && <p>No rooms found.</p>}
 
         {/* Print-friendly rules */}
         <style>{`
@@ -587,7 +587,7 @@ export default function LabelsPage() {
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={async () => { setShowShareModal(false); await shareSelected(); }} className="tap-btn">Share as images</button>
-              <button onClick={() => { navigator.clipboard.writeText(`Boxes: ${selected.join(", ")}`); setShowShareModal(false); alert("Copied box list to clipboard"); }} className="tap-btn">Copy list</button>
+              <button onClick={() => { navigator.clipboard.writeText(`Rooms: ${selected.join(", ")}`); setShowShareModal(false); alert("Copied room list to clipboard"); }} className="tap-btn">Copy list</button>
               <button onClick={() => setShowShareModal(false)} className="tap-btn">Cancel</button>
             </div>
           </div>

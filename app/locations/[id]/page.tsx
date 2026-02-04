@@ -121,7 +121,7 @@ function LocationInner() {
       .maybeSingle();
 
     if (!locRes.data || locRes.error) {
-      setError("Location not found");
+      setError("Building not found");
       setLoading(false);
       return;
     }
@@ -222,7 +222,7 @@ function LocationInner() {
   }
 
   const destName = useMemo(() => {
-    if (destLocationId === "__none__") return "No location";
+    if (destLocationId === "__none__") return "No building";
     const l = allLocations.find((x) => x.id === destLocationId);
     return l?.name ?? "Destination";
   }, [destLocationId, allLocations]);
@@ -240,7 +240,7 @@ function LocationInner() {
   async function createLocationFromMove() {
     const trimmed = newLocName.trim();
     if (!trimmed) {
-      setError("Location name is required.");
+      setError("Building name is required.");
       return;
     }
 
@@ -263,7 +263,7 @@ function LocationInner() {
       .single();
 
     if (res.error || !res.data) {
-      setError(res.error?.message || "Failed to create location.");
+      setError(res.error?.message || "Failed to create building.");
       setBusy(false);
       return;
     }
@@ -283,11 +283,11 @@ function LocationInner() {
   function requestMoveSelected() {
     const ids = Array.from(selectedRef.current);
     if (ids.length === 0) {
-      setError("Select at least one box.");
+      setError("Select at least one room.");
       return;
     }
     if (!destLocationId) {
-      setError("Choose a destination location.");
+      setError("Choose a destination building.");
       return;
     }
 
@@ -349,7 +349,7 @@ function LocationInner() {
 
     const trimmed = editBoxName.trim();
     if (!trimmed) {
-      setError("Box name is required.");
+      setError("Room name is required.");
       return;
     }
 
@@ -374,7 +374,7 @@ function LocationInner() {
       .single();
 
     if (res.error || !res.data) {
-      setError(res.error?.message || "Failed to update box.");
+      setError(res.error?.message || "Failed to update room.");
       setBusy(false);
       return;
     }
@@ -475,7 +475,7 @@ function LocationInner() {
   if (!location) {
     return (
       <main style={{ padding: 16 }}>
-        <p style={{ color: "crimson" }}>{error ?? "Location not found."}</p>
+        <p style={{ color: "crimson" }}>{error ?? "Building not found."}</p>
       </main>
     );
   }
@@ -487,10 +487,10 @@ function LocationInner() {
   return (
     <main style={{ paddingBottom: moveMode ? 180 : 90 }}>
       <h1 className="sr-only" style={{ margin: "6px 0 6px" }}>{location.name}</h1>
-      <p style={{ marginTop: 0, opacity: 0.75 }}>Boxes in this location</p>
+      <p style={{ marginTop: 0, opacity: 0.75 }}>Rooms in this building</p>
 
       {error && <p style={{ color: "crimson" }}>{error}</p>}
-      {boxes.length === 0 && <p style={{ marginTop: 16 }}>No boxes here yet.</p>}
+      {boxes.length === 0 && <p style={{ marginTop: 16 }}>No rooms here yet.</p>}
 
       {moveMode && (
         <div
@@ -506,8 +506,8 @@ function LocationInner() {
         >
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
             <div>
-              <h2 style={{ margin: 0 }}>Move boxes</h2>
-              <div style={{ opacity: 0.85 }}>Tap box cards to select. Use the sticky bar to move.</div>
+              <h2 style={{ margin: 0 }}>Move rooms</h2>
+              <div style={{ opacity: 0.85 }}>Tap room cards to select. Use the sticky bar to move.</div>
             </div>
 
             <button type="button" onClick={exitMoveMode} disabled={busy}>
@@ -603,7 +603,7 @@ function LocationInner() {
                       e.stopPropagation();
                     }}
                   >
-                    <EditIconButton title="Edit box" disabled={busy} onClick={() => openEditBox(b)} />
+                    <EditIconButton title="Edit room" disabled={busy} onClick={() => openEditBox(b)} />
                   </span>
 
                   <span
@@ -612,7 +612,7 @@ function LocationInner() {
                       e.stopPropagation();
                     }}
                   >
-                    <DeleteIconButton title="Delete box" disabled={busy} onClick={() => requestDeleteBox(b)} />
+                    <DeleteIconButton title="Delete room" disabled={busy} onClick={() => requestDeleteBox(b)} />
                   </span>
                 </div>
               )}
@@ -650,9 +650,9 @@ function LocationInner() {
               disabled={busy}
               style={{ width: "100%" }}
             >
-              <option value="">Destination location…</option>
-              <option value="__none__">No location</option>
-              <option value="__new_location__">➕ Create new location…</option>
+              <option value="">Destination building…</option>
+              <option value="__none__">No building</option>
+              <option value="__new_location__">➕ Create new building…</option>
               {allLocations
                 .filter((l) => l.id !== location.id)
                 .map((l) => (

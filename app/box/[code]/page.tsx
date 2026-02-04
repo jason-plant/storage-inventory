@@ -181,7 +181,7 @@ export default function BoxPage() {
         .maybeSingle();
 
       if (!boxRes.data || boxRes.error) {
-        setError("Box not found");
+        setError("Room not found");
         setLoading(false);
         return;
       }
@@ -380,7 +380,7 @@ export default function BoxPage() {
 
     const trimmedName = editName.trim();
     if (!trimmedName) {
-      setError("Item name is required.");
+      setError("FFE name is required.");
       return;
     }
 
@@ -487,7 +487,7 @@ export default function BoxPage() {
       .single();
 
     if (res.error || !res.data) {
-      setError(res.error?.message || "Failed to update item.");
+      setError(res.error?.message || "Failed to update FFE.");
       setBusy(false);
       return;
     }
@@ -598,7 +598,7 @@ export default function BoxPage() {
 
   async function createNewBoxFromMove(name: string) {
     if (!name.trim()) {
-      setError("Box name is required.");
+      setError("Room name is required.");
       return null;
     }
 
@@ -627,7 +627,7 @@ export default function BoxPage() {
       .single();
 
     if (insertRes.error || !insertRes.data) {
-      setError(insertRes.error?.message || "Failed to create new box.");
+      setError(insertRes.error?.message || "Failed to create new room.");
       setBusy(false);
       return null;
     }
@@ -660,11 +660,11 @@ export default function BoxPage() {
 
     const ids = Array.from(selectedRef.current);
     if (ids.length === 0) {
-      setError("Select at least one item.");
+      setError("Select at least one FFE.");
       return;
     }
     if (!bulkDestBoxId) {
-      setError("Choose a destination box.");
+      setError("Choose a destination room.");
       return;
     }
 
@@ -910,7 +910,7 @@ export default function BoxPage() {
         </main>
       ) : !box ? (
         <main style={{ padding: 16 }}>
-          <p>{error ?? "Box not found."}</p>
+          <p>{error ?? "Room not found."}</p>
         </main>
       ) : (
         <main style={{ paddingBottom: 180 }}>
@@ -948,8 +948,8 @@ export default function BoxPage() {
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                 <div>
-                  <h2 style={{ margin: 0 }}>Move items</h2>
-                  <div style={{ opacity: 0.85 }}>Tap item cards to select. Use the sticky bar to move.</div>
+                  <h2 style={{ margin: 0 }}>Move FFE</h2>
+                  <div style={{ opacity: 0.85 }}>Tap FFE cards to select. Use the sticky bar to move.</div>
                 </div>
 
                 <button type="button" onClick={exitMoveMode} disabled={busy}>
@@ -971,7 +971,7 @@ export default function BoxPage() {
             </div>
           )}
 
-          <h2 style={{ margin: "14px 0 8px" }}>Items</h2>
+          <h2 style={{ margin: "14px 0 8px" }}>FFE</h2>
 
           <div style={{ display: "grid", gap: 10 }}>
             {items.map((i) => {
@@ -1122,7 +1122,7 @@ export default function BoxPage() {
 
           <a
             href={`/box/${encodeURIComponent(box.code)}/new-item`}
-            aria-label="Add item"
+            aria-label="Add FFE"
             style={{
               position: "fixed",
               right: 18,
@@ -1148,7 +1148,7 @@ export default function BoxPage() {
           <button
             type="button"
             onClick={() => (moveMode ? exitMoveMode() : enterMoveMode())}
-            aria-label="Move items"
+            aria-label="Move FFE"
             style={{
               position: "fixed",
               right: 18,
@@ -1165,7 +1165,7 @@ export default function BoxPage() {
               zIndex: 2000,
               cursor: "pointer",
             }}
-            title={moveMode ? "Exit move mode" : "Move items"}
+            title={moveMode ? "Exit move mode" : "Move FFE"}
             disabled={busy}
           >
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={moveMode ? "white" : "#111"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1228,7 +1228,7 @@ export default function BoxPage() {
                     return;
                   }
                   if (!bulkDestBoxId) {
-                    setError("Choose a destination box.");
+                    setError("Choose a destination room.");
                     return;
                   }
                   const dest = allBoxes.find((b) => b.id === bulkDestBoxId);
@@ -1285,7 +1285,7 @@ export default function BoxPage() {
           {/* ✅ Edit Item Modal (with Take Photo + Choose File) */}
           <Modal
             open={editItemOpen}
-            title="Edit item"
+            title="Edit FFE"
             onClose={() => {
               if (busy) return;
               setEditItemOpen(false);
@@ -1304,7 +1304,7 @@ export default function BoxPage() {
 
             <label style={{ display: "grid", gap: 6 }}>
               <span style={{ fontWeight: 800 }}>Name</span>
-              <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Item name" autoFocus disabled={busy} />
+              <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="FFE name" autoFocus disabled={busy} />
             </label>
 
             <label style={{ display: "grid", gap: 6 }}>
@@ -1321,7 +1321,7 @@ export default function BoxPage() {
             <label style={{ display: "grid", gap: 6 }}>
               <span style={{ fontWeight: 800 }}>Quantity</span>
               <input type="number" min={0} value={editQty} onChange={(e) => setEditQty(Number(e.target.value))} disabled={busy} />
-              <div style={{ opacity: 0.7, fontSize: 13 }}>Setting quantity to 0 will ask to delete the item.</div>
+              <div style={{ opacity: 0.7, fontSize: 13 }}>Setting quantity to 0 will ask to delete the FFE.</div>
             </label>
 
             <div style={{ display: "grid", gap: 10 }}>
@@ -1453,7 +1453,7 @@ export default function BoxPage() {
           {/* Delete item modal */}
           <Modal
             open={confirmDeleteOpen}
-            title="Delete item?"
+            title="Delete FFE?"
             anchor="center"
             onClose={() => {
               if (busy) return;
@@ -1464,14 +1464,14 @@ export default function BoxPage() {
           >
             {deleteReasonRef.current === "qty0" ? (
               <p style={{ marginTop: 0 }}>
-                Quantity is 0. Delete <strong>{deleteItemRef.current?.name ?? "this item"}</strong>?
+                Quantity is 0. Delete <strong>{deleteItemRef.current?.name ?? "this FFE"}</strong>?
               </p>
             ) : (
               <p style={{ marginTop: 0 }}>
-                Delete <strong>{deleteItemRef.current?.name ?? "this item"}</strong>?
+                Delete <strong>{deleteItemRef.current?.name ?? "this FFE"}</strong>?
               </p>
             )}
-            <p style={{ marginTop: 0, opacity: 0.85 }}>This will remove the item and any linked photo.</p>
+            <p style={{ marginTop: 0, opacity: 0.85 }}>This will remove the FFE and any linked photo.</p>
 
             {error && <p style={{ color: "crimson", marginTop: 0 }}>{error}</p>}
 

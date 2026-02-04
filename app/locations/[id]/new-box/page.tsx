@@ -64,7 +64,7 @@ export default function NewBoxInLocationPage() {
         .maybeSingle();
 
       if (!locRes.data || locRes.error) {
-        setErr("Location not found");
+        setErr("Building not found");
         return;
       }
 
@@ -96,7 +96,7 @@ export default function NewBoxInLocationPage() {
 
     const trimmed = name.trim();
     if (!trimmed) {
-      setErr("Box name is required.");
+      setErr("Room name is required.");
       return;
     }
 
@@ -125,7 +125,7 @@ export default function NewBoxInLocationPage() {
       .single();
 
     if (insertRes.error || !insertRes.data) {
-      setErr(insertRes.error?.message || "Failed to create box.");
+      setErr(insertRes.error?.message || "Failed to create room.");
       setBusy(false);
       return;
     }
@@ -144,9 +144,9 @@ export default function NewBoxInLocationPage() {
 
   return (
     <main style={{ paddingBottom: 90 }}>
-      <h1 className="sr-only" style={{ margin: "6px 0 6px" }}>Add Box</h1>
+      <h1 className="sr-only" style={{ margin: "6px 0 6px" }}>Add Room</h1>
       <p style={{ marginTop: 0, opacity: 0.75 }}>
-        Location: <strong>{location?.name ?? "…"}</strong>
+        Building: <strong>{location?.name ?? "…"}</strong>
       </p>
 
       {err && <p style={{ color: "crimson" }}>Error: {err}</p>}
@@ -164,7 +164,7 @@ export default function NewBoxInLocationPage() {
         }}
       >
         <input
-          placeholder="Box name"
+          placeholder="Room name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoFocus
@@ -182,7 +182,7 @@ export default function NewBoxInLocationPage() {
             disabled={busy || !name.trim() || !location}
             style={{ background: "#111", color: "#fff" }}
           >
-            {busy ? "Saving..." : "Save box"}
+            {busy ? "Saving..." : "Save room"}
           </button>
         </div>
       </div>

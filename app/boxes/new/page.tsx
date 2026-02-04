@@ -178,7 +178,7 @@ function NewBoxInner() {
     if (!trimmed) return;
 
     if (!projectId || projectId === "__unassigned__") {
-      setError("Select a project before creating a location.");
+      setError("Select a project before creating a building.");
       return;
     }
 
@@ -201,7 +201,7 @@ function NewBoxInner() {
       .single();
 
     if (res.error || !res.data) {
-      setError(res.error?.message || "Failed to create location.");
+      setError(res.error?.message || "Failed to create building.");
       setNewLocBusy(false);
       return;
     }
@@ -290,9 +290,9 @@ function NewBoxInner() {
           maxWidth: 560,
         }}
       >
-        <h1 className="sr-only" style={{ marginTop: 6 }}>Create Box</h1>
+        <h1 className="sr-only" style={{ marginTop: 6 }}>Create Room</h1>
         <p style={{ marginTop: 0, opacity: 0.85 }}>
-          Enter a name (optional) and pick a location (optional). Code is generated automatically.
+          Enter a name (optional) and pick a building (optional). Code is generated automatically.
         </p>
 
         {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
@@ -316,6 +316,7 @@ function NewBoxInner() {
                 setLocationId("");
                 try {
                   localStorage.setItem("activeProjectId", value);
+                  window.dispatchEvent(new Event("active-project-changed"));
                 } catch {}
               }}
               disabled={busy || loading}
@@ -333,8 +334,8 @@ function NewBoxInner() {
             onChange={(e) => handleLocationChange(e.target.value)}
             disabled={busy || loading}
           >
-            <option value="">Select location (optional)</option>
-            <option value="__new__">➕ Create new location…</option>
+            <option value="">Select building (optional)</option>
+            <option value="__new__">➕ Create new building…</option>
             {locations.map((l) => (
               <option key={l.id} value={l.id}>
                 {l.name}
@@ -360,7 +361,7 @@ function NewBoxInner() {
               disabled={busy || loading}
               style={{ background: "#111", color: "#fff" }}
             >
-              {busy ? "Saving..." : "Save box"}
+              {busy ? "Saving..." : "Save room"}
             </button>
           </div>
         </div>
@@ -368,17 +369,17 @@ function NewBoxInner() {
 
       <Modal
         open={newLocOpen}
-        title="Create new location"
+        title="Create new building"
         onClose={() => {
           if (newLocBusy) return;
           setNewLocOpen(false);
           setNewLocName("");
         }}
       >
-        <p style={{ marginTop: 0, opacity: 0.85 }}>Add a new location without leaving this page.</p>
+        <p style={{ marginTop: 0, opacity: 0.85 }}>Add a new building without leaving this page.</p>
 
         <input
-          placeholder="Location name (e.g. Shed, Loft)"
+          placeholder="Building name (e.g. Warehouse, Office)"
           value={newLocName}
           onChange={(e) => setNewLocName(e.target.value)}
           autoFocus
@@ -404,7 +405,7 @@ function NewBoxInner() {
             disabled={newLocBusy || !newLocName.trim()}
             style={{ background: "#111", color: "#fff" }}
           >
-            {newLocBusy ? "Creating..." : "Create location"}
+            {newLocBusy ? "Creating..." : "Create building"}
           </button>
         </div>
       </Modal>

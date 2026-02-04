@@ -36,8 +36,14 @@ export default function SearchPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const stored = localStorage.getItem("activeProjectId") || "";
-    setProjectId(stored);
+    const readProject = () => setProjectId(localStorage.getItem("activeProjectId") || "");
+    readProject();
+    window.addEventListener("storage", readProject);
+    window.addEventListener("active-project-changed", readProject as EventListener);
+    return () => {
+      window.removeEventListener("storage", readProject);
+      window.removeEventListener("active-project-changed", readProject as EventListener);
+    };
   }, []);
 
   useEffect(() => {
@@ -217,14 +223,14 @@ export default function SearchPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search items, descriptions, boxes, or locations..."
+              placeholder="Search FFE, descriptions, rooms, or buildings..."
           style={{ width: "100%", marginTop: 10 }}
         />
 
         {loading && <p>Searching…</p>}
         {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
 
-        {!loading && query && items.length === 0 && !error && <p>No items found.</p>}
+            {!loading && query && items.length === 0 && !error && <p>No FFE found.</p>}
 
         <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
           {items.map((i) => {
@@ -309,7 +315,7 @@ export default function SearchPage() {
                         setEditItem(i);
                         setEditModalOpen(true);
                       }}
-                      title="Edit item"
+                      title="Edit FFE"
                     />
                           <EditItemModal
                             open={editModalOpen}

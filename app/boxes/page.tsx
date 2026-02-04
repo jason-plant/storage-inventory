@@ -261,7 +261,7 @@ function BoxesInner() {
 
     const trimmed = editName.trim();
     if (!trimmed) {
-      setError("Box name is required.");
+      setError("Room name is required.");
       return;
     }
 
@@ -286,7 +286,7 @@ function BoxesInner() {
       .single();
 
     if (res.error || !res.data) {
-      setError(res.error?.message || "Failed to update box.");
+      setError(res.error?.message || "Failed to update room.");
       setBusy(false);
       return;
     }
@@ -344,7 +344,7 @@ function BoxesInner() {
   }
 
   const destName = useMemo(() => {
-    if (destLocationId === "__none__") return "No location";
+    if (destLocationId === "__none__") return "No building";
     const l = locations.find((x) => x.id === destLocationId);
     return l?.name ?? "Destination";
   }, [destLocationId, locations]);
@@ -363,12 +363,12 @@ function BoxesInner() {
   async function createLocationFromMove() {
     const trimmed = newLocName.trim();
     if (!trimmed) {
-      setError("Location name is required.");
+      setError("Building name is required.");
       return;
     }
 
     if (!projectId || projectId === "__unassigned__") {
-      setError("Select a project before creating a location.");
+      setError("Select a project before creating a building.");
       return;
     }
 
@@ -391,7 +391,7 @@ function BoxesInner() {
       .single();
 
     if (res.error || !res.data) {
-      setError(res.error?.message || "Failed to create location.");
+      setError(res.error?.message || "Failed to create building.");
       setBusy(false);
       return;
     }
@@ -411,11 +411,11 @@ function BoxesInner() {
   function requestMoveSelected() {
     const ids = Array.from(selectedRef.current);
     if (ids.length === 0) {
-      setError("Select at least one box.");
+      setError("Select at least one room.");
       return;
     }
     if (!destLocationId) {
-      setError("Choose a destination location.");
+      setError("Choose a destination building.");
       return;
     }
 
@@ -453,7 +453,7 @@ function BoxesInner() {
 
   return (
     <main style={{ paddingBottom: moveMode ? 180 : 90 }}>
-      <h1 className="sr-only" style={{ marginTop: 6 }}>Boxes</h1>
+      <h1 className="sr-only" style={{ marginTop: 6 }}>Rooms</h1>
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
         <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -465,6 +465,7 @@ function BoxesInner() {
               setProjectId(value);
               try {
                 localStorage.setItem("activeProjectId", value);
+                window.dispatchEvent(new Event("active-project-changed"));
               } catch {}
             }}
           >
@@ -480,8 +481,8 @@ function BoxesInner() {
       </div>
 
       {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
-      {loading && <p>Loading boxes…</p>}
-      {!loading && boxes.length === 0 && <p>No boxes yet.</p>}
+      {loading && <p>Loading rooms…</p>}
+      {!loading && boxes.length === 0 && <p>No rooms yet.</p>}
 
       {/* Move Mode helper panel */}
       {moveMode && (
@@ -498,8 +499,8 @@ function BoxesInner() {
         >
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
             <div>
-              <h2 style={{ margin: 0 }}>Move boxes</h2>
-              <div style={{ opacity: 0.85 }}>Tap box cards to select. Use the sticky bar to move.</div>
+              <h2 style={{ margin: 0 }}>Move rooms</h2>
+              <div style={{ opacity: 0.85 }}>Tap room cards to select. Use the sticky bar to move.</div>
             </div>
 
             <button type="button" onClick={exitMoveMode} disabled={busy}>
@@ -555,7 +556,7 @@ function BoxesInner() {
                 {!hideBoxCode && <div style={{ fontWeight: 900, fontSize: 16 }}>{b.code}</div>}
 
                 {b.name && <div style={{ fontWeight: 700 }}>{b.name}</div>}
-                <div style={{ opacity: 0.8 }}>{b.location_name ? b.location_name : "No location"}</div>
+                <div style={{ opacity: 0.8 }}>{b.location_name ? b.location_name : "No building"}</div>
 
                 <div
                   style={{
@@ -584,7 +585,7 @@ function BoxesInner() {
                       e.stopPropagation();
                     }}
                   >
-                    <EditIconButton title="Edit box" disabled={busy} onClick={() => openEditBox(b)} />
+                    <EditIconButton title="Edit room" disabled={busy} onClick={() => openEditBox(b)} />
                   </span>
 
                   <span
@@ -593,7 +594,7 @@ function BoxesInner() {
                       e.stopPropagation();
                     }}
                   >
-                    <DeleteIconButton title="Delete box" disabled={busy} onClick={() => requestDeleteBox(b)} />
+                    <DeleteIconButton title="Delete room" disabled={busy} onClick={() => requestDeleteBox(b)} />
                   </span>
                 </div>
               )}
@@ -605,7 +606,7 @@ function BoxesInner() {
       {/* FAB: Create new box */}
       <a
         href="/boxes/new"
-        aria-label="Create new box"
+        aria-label="Create new room"
         style={{
           position: "fixed",
           right: 18,
@@ -628,11 +629,11 @@ function BoxesInner() {
         </svg>
       </a>
 
-      {/* Move Boxes FAB */}
+      {/* Move Rooms FAB */}
       <button
         type="button"
         onClick={() => (moveMode ? exitMoveMode() : enterMoveMode())}
-        aria-label="Move boxes"
+        aria-label="Move rooms"
         style={{
           position: "fixed",
           right: 18,
@@ -649,7 +650,7 @@ function BoxesInner() {
           zIndex: 2000,
           cursor: "pointer",
         }}
-        title={moveMode ? "Exit move mode" : "Move boxes"}
+        title={moveMode ? "Exit move mode" : "Move rooms"}
         disabled={busy}
       >
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={moveMode ? "white" : "#111"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -690,7 +691,7 @@ function BoxesInner() {
             <select value={destLocationId} onChange={(e) => onDestinationChange(e.target.value)} disabled={busy} style={{ width: "100%" }}>
               <option value="">Destination location…</option>
               <option value="__none__">No location</option>
-              <option value="__new_location__">➕ Create new location…</option>
+              <option value="__new_location__">➕ Create new building…</option>
               {locations.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
@@ -719,7 +720,7 @@ function BoxesInner() {
       {/* Create Location Modal (from move) */}
       <Modal
         open={newLocOpen}
-        title="Create new location"
+        title="Create new building"
         onClose={() => {
           if (busy) return;
           setNewLocOpen(false);
@@ -728,7 +729,7 @@ function BoxesInner() {
       >
         <p style={{ marginTop: 0, opacity: 0.85 }}>Type a name, create it, and it’ll be selected as the destination.</p>
 
-        <input placeholder="Location name (e.g. Shed, Loft)" value={newLocName} onChange={(e) => setNewLocName(e.target.value)} autoFocus />
+        <input placeholder="Building name (e.g. Warehouse, Office)" value={newLocName} onChange={(e) => setNewLocName(e.target.value)} autoFocus />
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
@@ -744,7 +745,7 @@ function BoxesInner() {
           </button>
 
           <button type="button" onClick={createLocationFromMove} disabled={busy || !newLocName.trim()} style={{ background: "#111", color: "#fff" }}>
-            {busy ? "Creating..." : "Create location"}
+            {busy ? "Creating..." : "Create building"}
           </button>
         </div>
       </Modal>
@@ -804,7 +805,7 @@ function BoxesInner() {
       >
         <p style={{ marginTop: 0, opacity: 0.85 }}>Change the box name. This does not move the box.</p>
 
-        <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Box name" autoFocus />
+        <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Room name" autoFocus />
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
@@ -829,7 +830,7 @@ function BoxesInner() {
       {/* Delete box modal */}
       <Modal
         open={confirmDeleteOpen}
-        title="Delete box?"
+        title="Delete room?"
         onClose={() => {
           if (busy) return;
           setConfirmDeleteOpen(false);
@@ -837,7 +838,7 @@ function BoxesInner() {
         }}
       >
         <p style={{ marginTop: 0 }}>
-          Delete <strong>{boxToDeleteRef.current?.code ?? "this box"}</strong>?
+          Delete <strong>{boxToDeleteRef.current?.code ?? "this room"}</strong>?
         </p>
         <p style={{ marginTop: 0, opacity: 0.85 }}>This will delete all items inside it and remove linked photos.</p>
 

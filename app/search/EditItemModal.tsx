@@ -50,9 +50,9 @@ export default function EditItemModal({
 
   if (!open) return null;
   return (
-    <Modal open={open} onClose={onClose} title="Edit Item">
+    <Modal open={open} onClose={onClose} title="Edit FFE">
       <div className="p-4">
-        <h2 className="text-lg font-bold mb-2">Edit Item</h2>
+        <h2 className="text-lg font-bold mb-2">Edit FFE</h2>
         <label className="block mb-2">
           Name
           <input className="border p-1 w-full" value={name} onChange={e => setName(e.target.value)} />

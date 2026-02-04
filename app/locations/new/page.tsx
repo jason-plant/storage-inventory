@@ -56,7 +56,7 @@ function NewLocationInner() {
 
   async function save() {
     if (!name.trim()) {
-      setError("Location name is required.");
+      setError("Building name is required.");
       return;
     }
 
@@ -92,13 +92,14 @@ function NewLocationInner() {
       .single();
 
     if (res.error || !res.data) {
-      setError(res.error?.message || "Failed to create location.");
+      setError(res.error?.message || "Failed to create building.");
       setBusy(false);
       return;
     }
 
     try {
       localStorage.setItem("activeProjectId", projectId);
+      window.dispatchEvent(new Event("active-project-changed"));
     } catch {}
 
     router.push("/locations");
@@ -117,14 +118,25 @@ function NewLocationInner() {
           maxWidth: 520,
         }}
       >
-        <h1 className="sr-only" style={{ marginTop: 6 }}>New Location</h1>
+        <h1 className="sr-only" style={{ marginTop: 6 }}>New Building</h1>
 
         {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
 
         <div style={{ display: "grid", gap: 12 }}>
           <label style={{ display: "grid", gap: 6 }}>
             <span style={{ fontWeight: 800 }}>Project</span>
-            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={busy}>
+            <select
+              value={projectId}
+              onChange={(e) => {
+                const value = e.target.value;
+                setProjectId(value);
+                try {
+                  localStorage.setItem("activeProjectId", value);
+                  window.dispatchEvent(new Event("active-project-changed"));
+                } catch {}
+              }}
+              disabled={busy}
+            >
               <option value="">Select project…</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
@@ -133,7 +145,7 @@ function NewLocationInner() {
           </label>
 
           <input
-            placeholder="Location name (e.g. Shed, Loft, Garage)"
+            placeholder="Building name (e.g. Warehouse, Office)"
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
@@ -159,7 +171,7 @@ function NewLocationInner() {
               disabled={busy || !name.trim() || !projectId}
               style={{ background: "#111", color: "#fff" }}
             >
-              {busy ? "Saving..." : "Save location"}
+              {busy ? "Saving..." : "Save building"}
             </button>
           </div>
         </div>

@@ -226,6 +226,7 @@ function ProjectsInner() {
   function openProject(p: ProjectRow) {
     try {
       localStorage.setItem("activeProjectId", p.id);
+      window.dispatchEvent(new Event("active-project-changed"));
     } catch {}
     router.push("/locations");
   }
@@ -233,7 +234,7 @@ function ProjectsInner() {
   return (
     <main style={{ paddingBottom: 90 }}>
       <h1 style={{ marginTop: 6, marginBottom: 6 }}>Projects</h1>
-      <p style={{ marginTop: 0, opacity: 0.75 }}>Projects group locations together.</p>
+      <p style={{ marginTop: 0, opacity: 0.75 }}>Projects group buildings together.</p>
 
       {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
       {loading && <p>Loading…</p>}
@@ -286,7 +287,7 @@ function ProjectsInner() {
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <div style={{ fontWeight: 900 }}>{p.name}</div>
-                <div style={{ fontSize: 12, opacity: 0.75 }}>{locationCount} location{locationCount === 1 ? "" : "s"}</div>
+                <div style={{ fontSize: 12, opacity: 0.75 }}>{locationCount} building{locationCount === 1 ? "" : "s"}</div>
               </div>
 
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -327,8 +328,8 @@ function ProjectsInner() {
       {/* Blocked delete */}
       <Modal open={blockedOpen} title="Can’t delete project" onClose={() => setBlockedOpen(false)}>
         <p style={{ marginTop: 0 }}>
-          {blockedInfoRef.current?.name} has {blockedInfoRef.current?.locationCount ?? 0} location(s).
-          Move or delete those locations first.
+          {blockedInfoRef.current?.name} has {blockedInfoRef.current?.locationCount ?? 0} building(s).
+          Move or delete those buildings first.
         </p>
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <button className="tap-btn" onClick={() => setBlockedOpen(false)}>OK</button>

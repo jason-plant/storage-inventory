@@ -140,7 +140,7 @@ function ScanItemInner() {
   }
 
   function resetAfterNewPhoto() {
-    // keep box selection, but reset item bits
+    // keep room selection, but reset FFE bits
     setError(null);
     setName("");
     setDesc("");
@@ -204,7 +204,7 @@ function ScanItemInner() {
       return;
     }
     if (!name.trim()) {
-      setError("Item name is required.");
+      setError("FFE name is required.");
       return;
     }
     if (!capturedFile) {
@@ -239,7 +239,7 @@ function ScanItemInner() {
       .single();
 
     if (insertRes.error || !insertRes.data) {
-      setError(insertRes.error?.message || "Failed to create item.");
+      setError(insertRes.error?.message || "Failed to create FFE.");
       setBusy(false);
       return;
     }
@@ -356,9 +356,9 @@ function ScanItemInner() {
 
   return (
     <main style={{ padding: 20, paddingBottom: 110 }}>
-      <h1 className="sr-only" style={{ marginTop: 6 }}>Scan Item</h1>
+      <h1 className="sr-only" style={{ marginTop: 6 }}>Scan FFE</h1>
       <p style={{ marginTop: 0, opacity: 0.8 }}>
-        Pick a box, take a photo, then type a short name and save.
+        Pick a room, take a photo, then type a short name and save.
       </p>
 
       {error && <p style={{ color: "crimson", fontWeight: 700 }}>Error: {error}</p>}
@@ -478,7 +478,7 @@ function ScanItemInner() {
         <div style={{ height: 12 }} />
 
         <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontWeight: 900 }}>Item name</span>
+          <span style={{ fontWeight: 900 }}>FFE name</span>
           <input
             ref={nameInputRef}
             value={name}
@@ -525,7 +525,7 @@ function ScanItemInner() {
             disabled={busy || !selectedBoxId || !name.trim() || !capturedFile}
             style={{ background: "#16a34a", color: "#fff", fontWeight: 900 }}
           >
-            {busy ? "Saving…" : "Save item"}
+            {busy ? "Saving…" : "Save FFE"}
           </button>
         </div>
       </div>

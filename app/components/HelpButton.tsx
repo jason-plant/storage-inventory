@@ -10,13 +10,13 @@ export default function HelpButton() {
 
   const meta = useMemo(() => {
     if (pathname === "/" || pathname === "/locations")
-      return { title: "Locations", content: (
+      return { title: "Buildings", content: (
         <>
-          <p>Start here to organize where your boxes live.</p>
+          <p>Start here to organize where your rooms live.</p>
           <ul>
-            <li>Tap <strong>New</strong> to add a location (e.g., Garage, Closet).</li>
-            <li>Use the edit/delete icons on a location card to rename or remove it.</li>
-            <li>Select a location card to view and manage its boxes.</li>
+            <li>Tap <strong>New</strong> to add a building (e.g., Warehouse, Office).</li>
+            <li>Use the edit/delete icons on a building card to rename or remove it.</li>
+            <li>Select a building card to view and manage its rooms.</li>
           </ul>
         </>
       ) };
@@ -24,47 +24,47 @@ export default function HelpButton() {
     if (pathname.startsWith("/projects"))
       return { title: "Projects", content: (
         <>
-          <p>Projects group your locations into larger areas.</p>
+          <p>Projects group your buildings into larger areas.</p>
           <ul>
-            <li>Create a project first, then add locations under it.</li>
+            <li>Create a project first, then add buildings under it.</li>
             <li>Rename projects any time.</li>
-            <li>Delete a project only after removing or moving its locations.</li>
+            <li>Delete a project only after removing or moving its buildings.</li>
           </ul>
         </>
       ) };
 
     if (pathname.startsWith("/locations/"))
-      return { title: "Location", content: (
+      return { title: "Building", content: (
         <>
-          <p>Manage all boxes stored in this location.</p>
+          <p>Manage all rooms stored in this building.</p>
           <ul>
-            <li>Tap <strong>New</strong> to create a box in this location.</li>
-            <li>Use edit/delete icons on a box card to rename or remove it.</li>
-            <li>Select a box card to open it and manage its items.</li>
+            <li>Tap <strong>New</strong> to create a room in this building.</li>
+            <li>Use edit/delete icons on a room card to rename or remove it.</li>
+            <li>Select a room card to open it and manage its FFE.</li>
           </ul>
         </>
       ) };
 
     if (pathname.startsWith("/boxes"))
-      return { title: "Boxes", content: (
+      return { title: "Rooms", content: (
         <>
-          <p>Browse and manage all boxes across locations.</p>
+          <p>Browse and manage all rooms across buildings.</p>
           <ul>
-            <li>Tap a box to open it and see items inside.</li>
-            <li>Use the edit/delete icons on a box card to update details.</li>
-            <li>Tap <strong>New</strong> to create a box and assign a location.</li>
+            <li>Tap a room to open it and see FFE inside.</li>
+            <li>Use the edit/delete icons on a room card to update details.</li>
+            <li>Tap <strong>New</strong> to create a room and assign a building.</li>
           </ul>
         </>
       ) };
 
     if (pathname.startsWith("/box/"))
-      return { title: "Box", content: (
+      return { title: "Room", content: (
         <>
-          <p>Manage items stored in this box.</p>
+          <p>Manage FFE stored in this room.</p>
           <ul>
             <li>Tap an item to edit its name, quantity, description, or photo.</li>
-            <li>Use the + button to add a new item to this box.</li>
-            <li>Use Edit/Delete on items, or edit the box details as needed.</li>
+            <li>Use the + button to add new FFE to this room.</li>
+            <li>Use Edit/Delete on FFE, or edit the room details as needed.</li>
           </ul>
         </>
       ) };
@@ -72,9 +72,9 @@ export default function HelpButton() {
     if (pathname.startsWith("/labels"))
       return { title: "Labels", content: (
         <>
-          <p>Create, print, or share QR labels for your boxes.</p>
+          <p>Create, print, or share QR labels for your rooms.</p>
           <ul>
-            <li>Long-press a label to select multiple boxes.</li>
+            <li>Long-press a label to select multiple rooms.</li>
             <li>Pick a layout (Default, 40×30 mm, 50×80 mm) and number of copies.</li>
             <li>Print, export PDF, share images, or try Bluetooth printing (device support varies).</li>
           </ul>
@@ -84,11 +84,11 @@ export default function HelpButton() {
     if (pathname.startsWith("/scan-item") || pathname.startsWith("/scan"))
       return { title: "Scan", content: (
         <>
-          <p>Scan a barcode or QR code to jump to a box or item.</p>
+          <p>Scan a barcode or QR code to jump to a room or FFE.</p>
           <ul>
             <li>Allow camera access when prompted.</li>
             <li>Hold the code steady in the frame for quick detection.</li>
-            <li>Results open the matching box or item automatically.</li>
+            <li>Results open the matching room or FFE automatically.</li>
           </ul>
         </>
       ) };
@@ -96,11 +96,11 @@ export default function HelpButton() {
     if (pathname.startsWith("/search"))
       return { title: "Search", content: (
         <>
-          <p>Find boxes or items quickly across your inventory.</p>
+          <p>Find rooms or FFE quickly across your inventory.</p>
           <ul>
-            <li>Type a box code, box name, location, or item name to search.</li>
-            <li>Select a result to open the box or item details.</li>
-            <li>Use edit actions from results to update items fast.</li>
+            <li>Type a room code, room name, building, or FFE name to search.</li>
+            <li>Select a result to open the room or FFE details.</li>
+            <li>Use edit actions from results to update FFE fast.</li>
           </ul>
         </>
       ) };
@@ -122,7 +122,7 @@ export default function HelpButton() {
         <p>Get around and manage your storage quickly.</p>
         <ul>
           <li>Use the menu in the top-right to navigate to key pages.</li>
-          <li>Search to jump directly to a box or item.</li>
+          <li>Search to jump directly to a room or FFE.</li>
           <li>Use labels and scan to connect physical storage to the app.</li>
         </ul>
       </>

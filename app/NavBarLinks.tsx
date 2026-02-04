@@ -35,14 +35,14 @@ export default function NavBarLinks() {
             href="/locations"
             className={`nav-btn ${isActive("/locations") ? "active" : ""}`}
           >
-            Locations
+            Buildings
           </Link>
 
           <Link
             href="/boxes"
             className={`nav-btn ${isActive("/boxes") ? "active" : ""}`}
           >
-            Boxes
+            Rooms
           </Link>
 
           <Link
@@ -70,7 +70,7 @@ export default function NavBarLinks() {
             href="/scan-item"
             className={`nav-btn ${isActive("/scan-item") ? "active" : ""}`}
           >
-            Scan Item
+            Scan FFE
           </Link>
 
           <button className="nav-btn" onClick={signOut}>
