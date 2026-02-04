@@ -273,6 +273,15 @@ function ProjectsInner() {
           return (
             <div
               key={p.id}
+              onClick={() => openProject(p)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openProject(p);
+                }
+              }}
               style={{
                 background: "var(--surface)",
                 border: "1px solid var(--border)",
@@ -283,6 +292,7 @@ function ProjectsInner() {
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: 12,
+                cursor: "pointer",
               }}
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -291,9 +301,12 @@ function ProjectsInner() {
               </div>
 
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <button className="tap-btn" onClick={() => openProject(p)}>Open</button>
-                <EditIconButton onClick={() => openEdit(p)} title="Edit project" />
-                <DeleteIconButton onClick={() => requestDelete(p)} title="Delete project" />
+                <span onClick={(e) => e.stopPropagation()}>
+                  <EditIconButton onClick={() => openEdit(p)} title="Edit project" />
+                </span>
+                <span onClick={(e) => e.stopPropagation()}>
+                  <DeleteIconButton onClick={() => requestDelete(p)} title="Delete project" />
+                </span>
               </div>
             </div>
           );

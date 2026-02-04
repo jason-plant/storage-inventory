@@ -16,10 +16,6 @@ type LocationRow = {
   boxes?: { count: number }[];
 };
 
-type ProjectRow = {
-  id: string;
-  name: string;
-};
 
 export default function LocationsPage() {
   return (
@@ -34,7 +30,6 @@ function LocationsInner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [locations, setLocations] = useState<LocationRow[]>([]);
-  const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [projectId, setProjectId] = useState<string>("");
 
   // delete modal
@@ -73,19 +68,6 @@ function LocationsInner() {
       setLocations([]);
       setLoading(false);
       return;
-    }
-
-    const projectRes = await supabase
-      .from("projects")
-      .select("id,name")
-      .eq("owner_id", userId)
-      .order("name");
-
-    if (projectRes.error) {
-      setError(projectRes.error.message);
-      setProjects([]);
-    } else {
-      setProjects((projectRes.data ?? []) as ProjectRow[]);
     }
 
     // locations + count of related boxes
@@ -241,31 +223,6 @@ function LocationsInner() {
     <main style={{ paddingBottom: 90 }}>
       <h1 className="sr-only" style={{ marginTop: 6 }}>Buildings</h1>
       <p style={{ marginTop: 0, opacity: 0.75 }}>Choose a building to view its rooms.</p>
-
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
-        <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          Project:
-          <select
-            value={projectId}
-            onChange={(e) => {
-              const value = e.target.value;
-              setProjectId(value);
-              try {
-                localStorage.setItem("activeProjectId", value);
-                window.dispatchEvent(new Event("active-project-changed"));
-              } catch {}
-            }}
-          >
-            <option value="">All projects</option>
-            <option value="__unassigned__">Unassigned</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        </label>
-
-        <a href="/projects" className="tap-btn">Manage projects</a>
-      </div>
 
       {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
       {loading && <p>Loading…</p>}

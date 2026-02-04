@@ -225,6 +225,10 @@ export default function BurgerMenu() {
     ];
   }, [user, activeProjectId]);
 
+  if (pathname?.startsWith("/projects")) {
+    return null;
+  }
+
   if (user && (!activeProjectId || activeProjectId === "__unassigned__")) {
     return null;
   }

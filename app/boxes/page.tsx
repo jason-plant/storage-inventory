@@ -13,10 +13,6 @@ type LocationRow = {
   project_id?: string | null;
 };
 
-type ProjectRow = {
-  id: string;
-  name: string;
-};
 
 type BoxRow = {
   id: string;
@@ -38,7 +34,6 @@ export default function BoxesPage() {
 function BoxesInner() {
   const [boxes, setBoxes] = useState<BoxRow[]>([]);
   const [locations, setLocations] = useState<LocationRow[]>([]);
-  const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [projectId, setProjectId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -102,15 +97,6 @@ function BoxesInner() {
       setLoading(false);
       return;
     }
-
-    // Load projects
-    const projectRes = await supabase
-      .from("projects")
-      .select("id,name")
-      .eq("owner_id", userId)
-      .order("name");
-
-    if (!projectRes.error) setProjects((projectRes.data ?? []) as ProjectRow[]);
 
     // Load locations
     let locQuery = supabase.from("locations").select("id,name,project_id").eq("owner_id", userId);
@@ -454,31 +440,6 @@ function BoxesInner() {
   return (
     <main style={{ paddingBottom: moveMode ? 180 : 90 }}>
       <h1 className="sr-only" style={{ marginTop: 6 }}>Rooms</h1>
-
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
-        <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          Project:
-          <select
-            value={projectId}
-            onChange={(e) => {
-              const value = e.target.value;
-              setProjectId(value);
-              try {
-                localStorage.setItem("activeProjectId", value);
-                window.dispatchEvent(new Event("active-project-changed"));
-              } catch {}
-            }}
-          >
-            <option value="">All projects</option>
-            <option value="__unassigned__">Unassigned</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        </label>
-
-        <a href="/projects" className="tap-btn">Manage projects</a>
-      </div>
 
       {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
       {loading && <p>Loading rooms…</p>}

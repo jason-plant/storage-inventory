@@ -306,28 +306,15 @@ function NewBoxInner() {
             disabled={busy}
           />
 
-          <label style={{ display: "grid", gap: 6 }}>
+          <div style={{ display: "grid", gap: 6 }}>
             <span style={{ fontWeight: 800 }}>Project</span>
-            <select
-              value={projectId}
-              onChange={(e) => {
-                const value = e.target.value;
-                setProjectId(value);
-                setLocationId("");
-                try {
-                  localStorage.setItem("activeProjectId", value);
-                  window.dispatchEvent(new Event("active-project-changed"));
-                } catch {}
-              }}
-              disabled={busy || loading}
-            >
-              <option value="">All projects</option>
-              <option value="__unassigned__">Unassigned</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </label>
+            <div style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid var(--border)", background: "var(--surface)" }}>
+              {projectId && projectId !== "__unassigned__"
+                ? (projects.find((p) => p.id === projectId)?.name ?? "Selected project")
+                : "No project selected"}
+            </div>
+            {!projectId && <a href="/projects" className="tap-btn">Select a project</a>}
+          </div>
 
           <select
             value={locationId}
